@@ -161,8 +161,7 @@ CREATE TABLE health_checks (
 );
 
 CREATE INDEX idx_health_api ON health_checks(api_entry_id, checked_at DESC);
-CREATE INDEX idx_health_recent ON health_checks(checked_at DESC)
-  WHERE checked_at > NOW() - INTERVAL '7 days';
+CREATE INDEX idx_health_recent ON health_checks(checked_at DESC);
 
 -- ============================================================================
 -- AUDIT_LOGS
