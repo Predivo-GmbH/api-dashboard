@@ -1,23 +1,217 @@
+import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Loader2, FolderKanban } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { ApiStatusBadge } from '@/components/shared/StatusBadge'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { useProjectDetail, useAssignApi, useUnassignApi } from '@/hooks/useProjects'
+import { useApiList } from '@/hooks/useApis'
+import { formatCurrency, formatDate } from '@/lib/formatters'
+import { API_CATEGORIES } from '@/lib/constants'
+import type { ApiCategory, ApiStatus } from '@/lib/constants'
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>()
+  const { data: project, isLoading } = useProjectDetail(id)
+  const { data: allApis } = useApiList()
+  const assignApi = useAssignApi()
+  const unassignApi = useUnassignApi()
+
+  const [assignOpen, setAssignOpen] = useState(false)
+  const [selectedApiId, setSelectedApiId] = useState('')
+  const [envVarName, setEnvVarName] = useState('')
+  const [removeTarget, setRemoveTarget] = useState<{ id: string; api_entry_id: string; name: string } | null>(null)
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6 p-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-[300px] w-full" />
+      </div>
+    )
+  }
+
+  if (!project) {
+    return (
+      <div className="p-6">
+        <p className="text-muted-foreground">Project not found.</p>
+        <Button variant="ghost" asChild className="mt-4">
+          <Link to="/projects"><ArrowLeft className="mr-2 h-4 w-4" />Back to Projects</Link>
+        </Button>
+      </div>
+    )
+  }
+
+  const assignedApiIds = new Set(project.assignments.map((a: { api_entry_id: string }) => a.api_entry_id))
+  const availableApis = (allApis ?? []).filter((a) => !assignedApiIds.has(a.id))
+
+  async function handleAssign() {
+    if (!selectedApiId) return
+    await assignApi.mutateAsync({
+      api_entry_id: selectedApiId,
+      project_id: project!.id,
+      env_var_name: envVarName || null,
+      notes: null,
+    })
+    setAssignOpen(false)
+    setSelectedApiId('')
+    setEnvVarName('')
+  }
 
   return (
-    <div className="p-6">
-      <Button variant="ghost" size="sm" asChild className="mb-4">
-        <Link to="/projects">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Projects
-        </Link>
+    <div className="space-y-6 p-6">
+      <Button variant="ghost" size="sm" asChild>
+        <Link to="/projects"><ArrowLeft className="mr-2 h-4 w-4" />Back to Projects</Link>
       </Button>
-      <h1 className="mb-6 text-2xl font-bold">Project Details</h1>
-      <p className="text-sm text-muted-foreground">ID: {id}</p>
-      <p className="mt-4 text-muted-foreground">
-        Assigned APIs, cost breakdown, and project management will appear here.
-      </p>
+
+      <div className="flex items-center gap-3">
+        <div className="h-5 w-5 shrink-0 rounded-full" style={{ backgroundColor: project.color ?? '#6B7280' }} />
+        <h1 className="text-2xl font-bold">{project.name}</h1>
+        <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>{project.status}</Badge>
+      </div>
+
+      {project.description && (
+        <p className="text-sm text-muted-foreground">{project.description}</p>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Assigned APIs</p>
+            <p className="text-2xl font-bold">{project.assignments.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Total Cost (usage)</p>
+            <p className="text-2xl font-bold">{formatCurrency(project.totalCost)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">Created</p>
+            <p className="text-2xl font-bold">{formatDate(project.created_at)}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Assigned APIs</CardTitle>
+          <Button size="sm" onClick={() => setAssignOpen(true)} disabled={availableApis.length === 0}>
+            <Plus className="mr-1 h-3 w-3" />Assign API
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {project.assignments.length === 0 ? (
+            <EmptyState
+              icon={FolderKanban}
+              title="No APIs assigned"
+              description="Assign APIs to this project to track which keys and services it uses."
+              action={
+                <Button size="sm" onClick={() => setAssignOpen(true)} disabled={availableApis.length === 0}>
+                  <Plus className="mr-1 h-3 w-3" />Assign API
+                </Button>
+              }
+            />
+          ) : (
+            <div className="space-y-2">
+              {project.assignments.map((a: Record<string, unknown>) => {
+                const api = a.api_entries as Record<string, unknown> | undefined
+                return (
+                  <div key={a.id as string} className="flex items-center justify-between rounded-lg border p-3">
+                    <Link to={`/apis/${a.api_entry_id}`} className="min-w-0 hover:underline">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">{String(api?.name ?? a.api_entry_id)}</p>
+                        {api?.status ? <ApiStatusBadge status={api.status as ApiStatus} /> : null}
+                      </div>
+                      <div className="flex gap-2 text-xs text-muted-foreground">
+                        {api?.provider ? <span>{String(api.provider)}</span> : null}
+                        {api?.category ? (
+                          <Badge variant="outline" className="text-xs">
+                            {String(API_CATEGORIES[api.category as ApiCategory]?.label ?? api.category)}
+                          </Badge>
+                        ) : null}
+                        {a.env_var_name ? <code>{String(a.env_var_name)}</code> : null}
+                      </div>
+                    </Link>
+                    <Button
+                      variant="ghost" size="icon"
+                      className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
+                      onClick={() => setRemoveTarget({
+                        id: a.id as string,
+                        api_entry_id: a.api_entry_id as string,
+                        name: String(api?.name ?? 'this API'),
+                      })}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign API to {project.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>API</Label>
+              <Select value={selectedApiId} onValueChange={setSelectedApiId}>
+                <SelectTrigger><SelectValue placeholder="Select an API" /></SelectTrigger>
+                <SelectContent>
+                  {availableApis.map((api) => (
+                    <SelectItem key={api.id} value={api.id}>{api.name} ({api.provider})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="env-var">Environment Variable Name</Label>
+              <Input id="env-var" value={envVarName} onChange={(e) => setEnvVarName(e.target.value)} placeholder="e.g. SERPAPI_API_KEY" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignOpen(false)}>Cancel</Button>
+            <Button onClick={handleAssign} disabled={assignApi.isPending || !selectedApiId}>
+              {assignApi.isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Assigning...</> : 'Assign'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={!!removeTarget}
+        onOpenChange={() => setRemoveTarget(null)}
+        title={`Remove ${removeTarget?.name}?`}
+        description="This will unassign the API from this project. The API entry itself won't be deleted."
+        confirmLabel="Remove"
+        variant="destructive"
+        loading={unassignApi.isPending}
+        onConfirm={() => {
+          if (removeTarget) {
+            unassignApi.mutate({ id: removeTarget.id, project_id: project!.id, api_entry_id: removeTarget.api_entry_id })
+            setRemoveTarget(null)
+          }
+        }}
+      />
     </div>
   )
 }
