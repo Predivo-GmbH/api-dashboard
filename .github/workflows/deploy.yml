@@ -23,15 +23,30 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
-      - name: Deploy via FTP
+      - name: Deploy via FTP (zero-downtime)
         run: |
           sudo apt-get install -y lftp
+          FTP_CONN="set ftp:ssl-allow no; set ftp:passive-mode yes; set net:max-retries 3; set net:reconnect-interval-base 5; open -u ${{ secrets.FTP_USER }},${{ secrets.FTP_PASS }} ${{ secrets.FTP_HOST }};"
+
+          # Step 1: Upload new hashed assets alongside old ones (no deletion yet)
           lftp -e "
-            set ftp:ssl-allow no;
-            set ftp:passive-mode yes;
-            set net:max-retries 3;
-            set net:reconnect-interval-base 5;
-            open -u ${{ secrets.FTP_USER }},${{ secrets.FTP_PASS }} ${{ secrets.FTP_HOST }};
-            mirror --reverse --no-perms --verbose ./dist/ /apis.predivo.ch/;
+            $FTP_CONN
+            mirror --reverse --no-perms --verbose ./dist/assets/ /apis.predivo.ch/assets/;
+            quit;
+          "
+
+          # Step 2: Upload index.html + root files (switches to new asset references)
+          lftp -e "
+            $FTP_CONN
+            put ./dist/index.html -o /apis.predivo.ch/index.html;
+            put ./dist/.htaccess -o /apis.predivo.ch/.htaccess;
+            put ./dist/favicon.svg -o /apis.predivo.ch/favicon.svg;
+            quit;
+          "
+
+          # Step 3: Clean up stale assets no longer in the new build
+          lftp -e "
+            $FTP_CONN
+            mirror --reverse --delete --no-perms --verbose ./dist/assets/ /apis.predivo.ch/assets/;
             quit;
           "
