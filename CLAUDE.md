@@ -40,3 +40,33 @@ IMMEDIATELY after implementing any front-end change:
 2. Verify design compliance against context files
 3. Capture screenshot at 1440px
 4. Check console for errors
+
+---
+
+## Verification Loop (MANDATORY)
+
+After ANY code change, verify before reporting completion:
+1. **Build** — `npm run build` must pass with zero TypeScript errors
+2. **Lint** — `npm run lint` must pass with zero errors
+3. **Test** — `npm test -- --run` must pass (all green)
+4. If any step fails, fix the issue before proceeding — do NOT move on with broken code
+
+For comprehensive validation, invoke the `@build-validator` agent.
+
+### Plan Before Building
+For non-trivial features (3+ files, new patterns, architectural changes):
+- Run `/plan` first to create a structured implementation plan
+- Wait for user approval before writing code
+
+---
+
+## Code Quality
+
+### Before Creating PRs
+- Run `/code-review` for a comprehensive code quality check
+- Run `/security-review` for any changes touching auth, APIs, or data handling
+- Run `/design-review` for any visual/UI changes
+- Run `@build-validator` to verify build, tests, lint, and no debug artifacts
+
+### Learn From Mistakes
+After a PR review catches issues, run `/learn` to extract recurring patterns and propose additions to this file.
