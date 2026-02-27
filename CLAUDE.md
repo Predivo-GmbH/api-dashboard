@@ -33,13 +33,23 @@
 ### Design References
 - Design principles: `/context/design-principles.md`
 - Brand style guide: `/context/style-guide.md`
+- When making visual (front-end, UI/UX) changes, ALWAYS refer to these files for guidance
 
 ### Quick Visual Check
 IMMEDIATELY after implementing any front-end change:
-1. Navigate to affected pages via Playwright MCP
-2. Verify design compliance against context files
-3. Capture screenshot at 1440px
-4. Check console for errors
+1. **Identify what changed** — Review the modified components/pages
+2. **Navigate to affected pages** — Use `mcp__playwright__browser_navigate` to visit each changed view
+3. **Verify design compliance** — Compare against `/context/design-principles.md` and `/context/style-guide.md`
+4. **Validate feature implementation** — Ensure the change fulfills the user's specific request
+5. **Check acceptance criteria** — Review any provided context files, UI mocks, or requirements
+6. **Capture evidence** — Take full-page screenshot at desktop viewport (1440px) of each changed view
+7. **Check for errors** — Run `mcp__playwright__browser_console_messages` and fix any errors before reporting completion
+
+### Comprehensive Design Review
+Invoke the `@design-review` agent for thorough design validation when:
+- Completing significant UI/UX features
+- Before finalizing PRs with visual changes
+- Needing comprehensive accessibility and responsiveness testing
 
 ---
 
@@ -137,3 +147,9 @@ When encountering bugs or unexpected failures:
 
 ### Learn From Mistakes
 After a PR review catches issues, run `/learn` to extract recurring patterns and propose additions to this file.
+
+### Rules
+- NO hardcoded hex colors or magic pixel values — use design tokens
+- NO new frameworks or libraries without discussion
+- All components must support light and dark mode
+- Comments explain 'why', not 'what'
