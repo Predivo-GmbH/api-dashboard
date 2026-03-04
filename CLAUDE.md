@@ -153,3 +153,12 @@ After a PR review catches issues, run `/learn` to extract recurring patterns and
 - NO new frameworks or libraries without discussion
 - All components must support light and dark mode
 - Comments explain 'why', not 'what'
+
+### Pipeline Checkpoint Rule
+**Before declaring any phase/step complete or asking the user what's next, you MUST:**
+1. Re-read the pipeline definition (handoff doc, plan, or this file) to verify ALL deliverables for the current phase are done
+2. If any deliverable is missing, continue working — do not skip ahead or ask the user to decide
+3. Only move to the next phase when every artifact listed for the current phase exists and is complete
+4. Never rely on memory of the pipeline — always verify against the written source of truth
+
+This applies to any multi-phase workflow: redesigns, refactors, feature rollouts, migration plans.
