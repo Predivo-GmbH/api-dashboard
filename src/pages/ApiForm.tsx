@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,7 @@ import { Separator } from '@/components/ui/separator'
 import { useApiDetail, useCreateApi, useUpdateApi } from '@/hooks/useApis'
 import { API_CATEGORIES, API_STATUSES, BILLING_MODELS } from '@/lib/constants'
 import type { ApiCategory, ApiStatus, BillingModel } from '@/lib/constants'
+import type { ApiEntry } from '@/types/api'
 
 const API_TYPES = [
   { value: 'rest', label: 'REST' },
@@ -32,6 +33,59 @@ const HEALTH_METHODS = [
   { value: 'POST', label: 'POST' },
 ] as const
 
+interface FormData {
+  name: string
+  provider: string
+  description: string
+  docsUrl: string
+  baseUrl: string
+  healthCheckUrl: string
+  healthCheckMethod: 'GET' | 'HEAD' | 'POST'
+  apiType: string
+  category: ApiCategory
+  accountOwner: string
+  accountEmail: string
+  billingModel: BillingModel
+  status: ApiStatus
+  notes: string
+}
+
+const defaultFormData: FormData = {
+  name: '',
+  provider: '',
+  description: '',
+  docsUrl: '',
+  baseUrl: '',
+  healthCheckUrl: '',
+  healthCheckMethod: 'GET',
+  apiType: 'rest',
+  category: 'other',
+  accountOwner: '',
+  accountEmail: '',
+  billingModel: 'pay_as_you_go',
+  status: 'active',
+  notes: '',
+}
+
+function formDataFromExisting(existing: ApiEntry): FormData {
+  return {
+    name: existing.name,
+    provider: existing.provider,
+    description: existing.description ?? '',
+    docsUrl: existing.docs_url ?? '',
+    baseUrl: existing.base_url ?? '',
+    healthCheckUrl: existing.health_check_url ?? '',
+    healthCheckMethod: existing.health_check_method,
+    apiType: existing.api_type,
+    category: existing.category,
+    accountOwner: existing.account_owner ?? '',
+    accountEmail: existing.account_email ?? '',
+    billingModel: existing.billing_model,
+    status: existing.status,
+    notes: existing.notes ?? '',
+  }
+}
+
 export default function ApiForm() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -41,39 +95,51 @@ export default function ApiForm() {
   const createApi = useCreateApi()
   const updateApi = useUpdateApi()
 
-  const [name, setName] = useState('')
-  const [provider, setProvider] = useState('')
-  const [description, setDescription] = useState('')
-  const [docsUrl, setDocsUrl] = useState('')
-  const [baseUrl, setBaseUrl] = useState('')
-  const [healthCheckUrl, setHealthCheckUrl] = useState('')
-  const [healthCheckMethod, setHealthCheckMethod] = useState<'GET' | 'HEAD' | 'POST'>('GET')
-  const [apiType, setApiType] = useState<string>('rest')
-  const [category, setCategory] = useState<ApiCategory>('other')
-  const [accountOwner, setAccountOwner] = useState('')
-  const [accountEmail, setAccountEmail] = useState('')
-  const [billingModel, setBillingModel] = useState<BillingModel>('pay_as_you_go')
-  const [status, setStatus] = useState<ApiStatus>('active')
-  const [notes, setNotes] = useState('')
+  // While loading existing data, show a spinner.
+  // Once loaded, render the form body with a key that forces re-mount,
+  // so useState initializers pick up the existing data without useEffect.
+  if (isEditing && loadingExisting) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
-  useEffect(() => {
-    if (existing) {
-      setName(existing.name)
-      setProvider(existing.provider)
-      setDescription(existing.description ?? '')
-      setDocsUrl(existing.docs_url ?? '')
-      setBaseUrl(existing.base_url ?? '')
-      setHealthCheckUrl(existing.health_check_url ?? '')
-      setHealthCheckMethod(existing.health_check_method)
-      setApiType(existing.api_type)
-      setCategory(existing.category)
-      setAccountOwner(existing.account_owner ?? '')
-      setAccountEmail(existing.account_email ?? '')
-      setBillingModel(existing.billing_model)
-      setStatus(existing.status)
-      setNotes(existing.notes ?? '')
-    }
-  }, [existing])
+  const initialData = existing ? formDataFromExisting(existing) : defaultFormData
+
+  return (
+    <ApiFormBody
+      key={existing ? id : 'new'}
+      id={id}
+      isEditing={isEditing}
+      initialData={initialData}
+      createApi={createApi}
+      updateApi={updateApi}
+      navigate={navigate}
+    />
+  )
+}
+
+function ApiFormBody({
+  id,
+  isEditing,
+  initialData,
+  createApi,
+  updateApi,
+  navigate,
+}: {
+  id: string | undefined
+  isEditing: boolean
+  initialData: FormData
+  createApi: ReturnType<typeof useCreateApi>
+  updateApi: ReturnType<typeof useUpdateApi>
+  navigate: ReturnType<typeof useNavigate>
+}) {
+  const [form, setForm] = useState<FormData>(initialData)
+
+  const setField = <K extends keyof FormData>(key: K, value: FormData[K]) =>
+    setForm((prev) => ({ ...prev, [key]: value }))
 
   const isPending = createApi.isPending || updateApi.isPending
 
@@ -81,37 +147,29 @@ export default function ApiForm() {
     e.preventDefault()
 
     const payload = {
-      name,
-      provider,
-      description: description || null,
-      docs_url: docsUrl || null,
-      base_url: baseUrl || null,
-      health_check_url: healthCheckUrl || null,
-      health_check_method: healthCheckMethod,
-      api_type: apiType as 'rest' | 'graphql' | 'grpc' | 'websocket' | 'sparql',
-      category,
-      account_owner: accountOwner || null,
-      account_email: accountEmail || null,
-      billing_model: billingModel,
-      status,
-      notes: notes || null,
+      name: form.name,
+      provider: form.provider,
+      description: form.description || null,
+      docs_url: form.docsUrl || null,
+      base_url: form.baseUrl || null,
+      health_check_url: form.healthCheckUrl || null,
+      health_check_method: form.healthCheckMethod,
+      api_type: form.apiType as 'rest' | 'graphql' | 'grpc' | 'websocket' | 'sparql',
+      category: form.category,
+      account_owner: form.accountOwner || null,
+      account_email: form.accountEmail || null,
+      billing_model: form.billingModel,
+      status: form.status,
+      notes: form.notes || null,
     }
 
-    if (isEditing) {
+    if (isEditing && id) {
       await updateApi.mutateAsync({ id, ...payload })
       navigate(`/apis/${id}`)
     } else {
       const created = await createApi.mutateAsync(payload)
       navigate(`/apis/${created.id}`)
     }
-  }
-
-  if (isEditing && loadingExisting) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    )
   }
 
   return (
@@ -138,8 +196,8 @@ export default function ApiForm() {
                 <Label htmlFor="name">Name *</Label>
                 <Input
                   id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  value={form.name}
+                  onChange={(e) => setField('name', e.target.value)}
                   placeholder="e.g. SerpAPI"
                   required
                 />
@@ -148,8 +206,8 @@ export default function ApiForm() {
                 <Label htmlFor="provider">Provider *</Label>
                 <Input
                   id="provider"
-                  value={provider}
-                  onChange={(e) => setProvider(e.target.value)}
+                  value={form.provider}
+                  onChange={(e) => setField('provider', e.target.value)}
                   placeholder="e.g. SerpApi LLC"
                   required
                 />
@@ -159,8 +217,8 @@ export default function ApiForm() {
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                value={form.description}
+                onChange={(e) => setField('description', e.target.value)}
                 placeholder="What does this API do?"
                 rows={2}
               />
@@ -168,7 +226,7 @@ export default function ApiForm() {
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label>API Type</Label>
-                <Select value={apiType} onValueChange={setApiType}>
+                <Select value={form.apiType} onValueChange={(v) => setField('apiType', v)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -183,7 +241,7 @@ export default function ApiForm() {
               </div>
               <div className="space-y-2">
                 <Label>Category</Label>
-                <Select value={category} onValueChange={(v) => setCategory(v as ApiCategory)}>
+                <Select value={form.category} onValueChange={(v) => setField('category', v as ApiCategory)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -198,7 +256,7 @@ export default function ApiForm() {
               </div>
               <div className="space-y-2">
                 <Label>Status</Label>
-                <Select value={status} onValueChange={(v) => setStatus(v as ApiStatus)}>
+                <Select value={form.status} onValueChange={(v) => setField('status', v as ApiStatus)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -225,8 +283,8 @@ export default function ApiForm() {
               <Input
                 id="baseUrl"
                 type="url"
-                value={baseUrl}
-                onChange={(e) => setBaseUrl(e.target.value)}
+                value={form.baseUrl}
+                onChange={(e) => setField('baseUrl', e.target.value)}
                 placeholder="https://api.example.com/v1"
               />
             </div>
@@ -235,8 +293,8 @@ export default function ApiForm() {
               <Input
                 id="docsUrl"
                 type="url"
-                value={docsUrl}
-                onChange={(e) => setDocsUrl(e.target.value)}
+                value={form.docsUrl}
+                onChange={(e) => setField('docsUrl', e.target.value)}
                 placeholder="https://docs.example.com"
               />
             </div>
@@ -247,14 +305,14 @@ export default function ApiForm() {
                 <Input
                   id="healthCheckUrl"
                   type="url"
-                  value={healthCheckUrl}
-                  onChange={(e) => setHealthCheckUrl(e.target.value)}
+                  value={form.healthCheckUrl}
+                  onChange={(e) => setField('healthCheckUrl', e.target.value)}
                   placeholder="https://api.example.com/health"
                 />
               </div>
               <div className="space-y-2">
                 <Label>Method</Label>
-                <Select value={healthCheckMethod} onValueChange={(v) => setHealthCheckMethod(v as 'GET' | 'HEAD' | 'POST')}>
+                <Select value={form.healthCheckMethod} onValueChange={(v) => setField('healthCheckMethod', v as 'GET' | 'HEAD' | 'POST')}>
                   <SelectTrigger className="w-[100px]">
                     <SelectValue />
                   </SelectTrigger>
@@ -281,8 +339,8 @@ export default function ApiForm() {
                 <Label htmlFor="accountOwner">Account Owner</Label>
                 <Input
                   id="accountOwner"
-                  value={accountOwner}
-                  onChange={(e) => setAccountOwner(e.target.value)}
+                  value={form.accountOwner}
+                  onChange={(e) => setField('accountOwner', e.target.value)}
                   placeholder="e.g. roger@predivo.ch"
                 />
               </div>
@@ -291,15 +349,15 @@ export default function ApiForm() {
                 <Input
                   id="accountEmail"
                   type="email"
-                  value={accountEmail}
-                  onChange={(e) => setAccountEmail(e.target.value)}
+                  value={form.accountEmail}
+                  onChange={(e) => setField('accountEmail', e.target.value)}
                   placeholder="e.g. api@predivo.ch"
                 />
               </div>
             </div>
             <div className="space-y-2">
               <Label>Billing Model</Label>
-              <Select value={billingModel} onValueChange={(v) => setBillingModel(v as BillingModel)}>
+              <Select value={form.billingModel} onValueChange={(v) => setField('billingModel', v as BillingModel)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -321,8 +379,8 @@ export default function ApiForm() {
           </CardHeader>
           <CardContent>
             <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              value={form.notes}
+              onChange={(e) => setField('notes', e.target.value)}
               placeholder="Any additional notes..."
               rows={3}
             />
