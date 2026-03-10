@@ -2,22 +2,35 @@ name: Keep Supabase Alive
 
 on:
   schedule:
-    - cron: '0 8 */3 * *' # Every 3 days at 8:00 UTC
+    - cron: '0 8 */2 * *' # Every 2 days at 8:00 UTC
   workflow_dispatch: # Allow manual trigger
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase
+      - name: Ping Supabase REST API
         run: |
           response=$(curl -s -o /dev/null -w "%{http_code}" \
             "${{ secrets.VITE_SUPABASE_URL }}/rest/v1/" \
             -H "apikey: ${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.VITE_SUPABASE_ANON_KEY }}")
-          echo "Response code: $response"
+          echo "REST API response: $response"
           if [ "$response" -ne 200 ]; then
-            echo "::warning::Supabase ping returned $response"
+            echo "::warning::Supabase REST ping returned $response"
             exit 1
           fi
-          echo "Supabase project is alive"
+      - name: Ping Supabase Auth
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.VITE_SUPABASE_URL }}/auth/v1/health" \
+            -H "apikey: ${{ secrets.VITE_SUPABASE_ANON_KEY }}")
+          echo "Auth health response: $response"
+      - name: Ping Supabase Storage
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.VITE_SUPABASE_URL }}/storage/v1/bucket" \
+            -H "apikey: ${{ secrets.VITE_SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.VITE_SUPABASE_ANON_KEY }}")
+          echo "Storage response: $response"
+          echo "Supabase project is alive — all services pinged"
