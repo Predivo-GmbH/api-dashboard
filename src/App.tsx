@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { Loader2 } from 'lucide-react'
 
 // Lazy-loaded pages
+const Landing = lazy(() => import('@/pages/Landing'))
 const Auth = lazy(() => import('@/pages/Auth'))
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
 const ApiInventory = lazy(() => import('@/pages/ApiInventory'))
@@ -49,6 +50,36 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function GatedRoutes() {
+  return (
+    <PasswordGate>
+      <Routes>
+        <Route
+          element={
+            <ProtectedRoute>
+              <AppLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/apis" element={<ApiInventory />} />
+          <Route path="/apis/new" element={<ApiForm />} />
+          <Route path="/apis/:id" element={<ApiDetail />} />
+          <Route path="/apis/:id/edit" element={<ApiForm />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/projects/:id" element={<ProjectDetail />} />
+          <Route path="/audit" element={<AuditLog />} />
+          <Route path="/settings" element={<Settings />}>
+            <Route index element={<AccountSettings />} />
+            <Route path="notifications" element={<NotificationSettings />} />
+          </Route>
+        </Route>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </PasswordGate>
+  )
+}
+
 function AppRoutes() {
   const { user, loading } = useAuth()
 
@@ -59,7 +90,7 @@ function AppRoutes() {
       <Route
         path="/"
         element={
-          user ? <Navigate to="/dashboard" replace /> : <Navigate to="/auth" replace />
+          user ? <Navigate to="/dashboard" replace /> : <Landing />
         }
       />
       <Route
@@ -68,46 +99,24 @@ function AppRoutes() {
           user ? <Navigate to="/dashboard" replace /> : <Auth />
         }
       />
-      <Route
-        element={
-          <ProtectedRoute>
-            <AppLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/apis" element={<ApiInventory />} />
-        <Route path="/apis/new" element={<ApiForm />} />
-        <Route path="/apis/:id" element={<ApiDetail />} />
-        <Route path="/apis/:id/edit" element={<ApiForm />} />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/projects/:id" element={<ProjectDetail />} />
-        <Route path="/audit" element={<AuditLog />} />
-        <Route path="/settings" element={<Settings />}>
-          <Route index element={<AccountSettings />} />
-          <Route path="notifications" element={<NotificationSettings />} />
-        </Route>
-      </Route>
-      <Route path="*" element={<NotFound />} />
+      <Route path="/*" element={<GatedRoutes />} />
     </Routes>
   )
 }
 
 export default function App() {
   return (
-    <PasswordGate>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <BrowserRouter>
-              <Suspense fallback={<Loading />}>
-                <AppRoutes />
-              </Suspense>
-            </BrowserRouter>
-            <Toaster />
-          </TooltipProvider>
-        </QueryClientProvider>
-      </ThemeProvider>
-    </PasswordGate>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <BrowserRouter>
+            <Suspense fallback={<Loading />}>
+              <AppRoutes />
+            </Suspense>
+          </BrowserRouter>
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   )
 }

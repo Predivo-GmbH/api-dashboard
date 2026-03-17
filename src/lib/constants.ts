@@ -1,18 +1,18 @@
 export const API_STATUSES = {
-  active: { label: 'Active', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-950' },
+  active: { label: 'Active', color: 'text-success', bg: 'bg-success-subtle' },
   inactive: { label: 'Inactive', color: 'text-muted-foreground', bg: 'bg-muted' },
-  deprecated: { label: 'Deprecated', color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-50 dark:bg-yellow-950' },
-  error: { label: 'Error', color: 'text-destructive', bg: 'bg-red-50 dark:bg-red-950' },
-  rate_limited: { label: 'Rate Limited', color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-950' },
+  deprecated: { label: 'Deprecated', color: 'text-warning', bg: 'bg-warning-subtle' },
+  error: { label: 'Error', color: 'text-destructive', bg: 'bg-error-subtle' },
+  rate_limited: { label: 'Rate Limited', color: 'text-warning', bg: 'bg-warning-subtle' },
 } as const
 
 export type ApiStatus = keyof typeof API_STATUSES
 
 export const HEALTH_STATUSES = {
-  up: { label: 'Up', color: 'text-green-600 dark:text-green-400' },
+  up: { label: 'Up', color: 'text-success' },
   down: { label: 'Down', color: 'text-destructive' },
-  degraded: { label: 'Degraded', color: 'text-yellow-600 dark:text-yellow-400' },
-  timeout: { label: 'Timeout', color: 'text-orange-600 dark:text-orange-400' },
+  degraded: { label: 'Degraded', color: 'text-warning' },
+  timeout: { label: 'Timeout', color: 'text-warning' },
   unknown: { label: 'Unknown', color: 'text-muted-foreground' },
 } as const
 

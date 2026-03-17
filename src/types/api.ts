@@ -144,4 +144,20 @@ export interface TriggeredAlert {
   recipients: string[]
   sent_at: string
   acknowledged_at: string | null
+  api_entries?: { name?: string; provider?: string }
+}
+
+export interface ProjectAssignmentWithApi {
+  id: string
+  api_entry_id: string
+  env_var_name: string | null
+  notes: string | null
+  created_at: string
+  api_entries?: {
+    id: string
+    name: string
+    provider: string
+    status: ApiStatus
+    category: ApiCategory
+  }[]
 }

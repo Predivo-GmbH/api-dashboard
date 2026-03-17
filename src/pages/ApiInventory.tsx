@@ -201,7 +201,7 @@ export default function ApiInventory() {
                                 (api.quota_usage_pct ?? 0) >= 95
                                   ? 'bg-destructive'
                                   : (api.quota_usage_pct ?? 0) >= 80
-                                    ? 'bg-yellow-500'
+                                    ? 'bg-warning'
                                     : 'bg-primary'
                               }`}
                               style={{ width: `${Math.min(api.quota_usage_pct ?? 0, 100)}%` }}

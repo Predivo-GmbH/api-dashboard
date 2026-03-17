@@ -20,7 +20,7 @@ export default function Projects() {
   const [addOpen, setAddOpen] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [color, setColor] = useState('#14B8A6')
+  const [color, setColor] = useState('#0D9488')
 
   async function handleCreate() {
     if (!name.trim()) return
@@ -32,7 +32,7 @@ export default function Projects() {
     setAddOpen(false)
     setName('')
     setDescription('')
-    setColor('#14B8A6')
+    setColor('#0D9488')
   }
 
   return (
@@ -78,7 +78,7 @@ export default function Projects() {
                   <div className="flex items-center gap-3">
                     <div
                       className="h-4 w-4 shrink-0 rounded-full"
-                      style={{ backgroundColor: project.color ?? '#6B7280' }}
+                      style={{ backgroundColor: project.color ?? 'var(--color-muted-foreground)' }}
                     />
                     <div className="min-w-0">
                       <p className="font-medium">{project.name}</p>

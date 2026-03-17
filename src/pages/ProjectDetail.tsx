@@ -20,7 +20,7 @@ import { useProjectDetail, useAssignApi, useUnassignApi } from '@/hooks/useProje
 import { useApiList } from '@/hooks/useApis'
 import { formatCurrency, formatDate } from '@/lib/formatters'
 import { API_CATEGORIES } from '@/lib/constants'
-import type { ApiCategory, ApiStatus } from '@/lib/constants'
+import type { ProjectAssignmentWithApi } from '@/types/api'
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>()
@@ -77,7 +77,7 @@ export default function ProjectDetail() {
       </Button>
 
       <div className="flex items-center gap-3">
-        <div className="h-5 w-5 shrink-0 rounded-full" style={{ backgroundColor: project.color ?? '#6B7280' }} />
+        <div className="h-5 w-5 shrink-0 rounded-full" style={{ backgroundColor: project.color ?? 'var(--color-muted-foreground)' }} />
         <h1 className="text-2xl font-bold">{project.name}</h1>
         <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>{project.status}</Badge>
       </div>
@@ -128,32 +128,32 @@ export default function ProjectDetail() {
             />
           ) : (
             <div className="space-y-2">
-              {project.assignments.map((a: Record<string, unknown>) => {
-                const api = a.api_entries as Record<string, unknown> | undefined
+              {project.assignments.map((a: ProjectAssignmentWithApi) => {
+                const api = a.api_entries?.[0]
                 return (
-                  <div key={a.id as string} className="flex items-center justify-between rounded-lg border p-3">
+                  <div key={a.id} className="flex items-center justify-between rounded-lg border p-3">
                     <Link to={`/apis/${a.api_entry_id}`} className="min-w-0 hover:underline">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">{String(api?.name ?? a.api_entry_id)}</p>
-                        {api?.status ? <ApiStatusBadge status={api.status as ApiStatus} /> : null}
+                        <p className="text-sm font-medium">{api?.name ?? a.api_entry_id}</p>
+                        {api?.status ? <ApiStatusBadge status={api.status} /> : null}
                       </div>
                       <div className="flex gap-2 text-xs text-muted-foreground">
-                        {api?.provider ? <span>{String(api.provider)}</span> : null}
+                        {api?.provider ? <span>{api.provider}</span> : null}
                         {api?.category ? (
                           <Badge variant="outline" className="text-xs">
-                            {String(API_CATEGORIES[api.category as ApiCategory]?.label ?? api.category)}
+                            {API_CATEGORIES[api.category]?.label ?? api.category}
                           </Badge>
                         ) : null}
-                        {a.env_var_name ? <code>{String(a.env_var_name)}</code> : null}
+                        {a.env_var_name ? <code>{a.env_var_name}</code> : null}
                       </div>
                     </Link>
                     <Button
                       variant="ghost" size="icon"
                       className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
                       onClick={() => setRemoveTarget({
-                        id: a.id as string,
-                        api_entry_id: a.api_entry_id as string,
-                        name: String(api?.name ?? 'this API'),
+                        id: a.id,
+                        api_entry_id: a.api_entry_id,
+                        name: api?.name ?? 'this API',
                       })}
                     >
                       <Trash2 className="h-3 w-3" />

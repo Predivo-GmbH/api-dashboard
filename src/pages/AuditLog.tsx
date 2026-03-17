@@ -14,13 +14,13 @@ import { useAuditLog } from '@/hooks/useAuditLog'
 import { formatDateTime } from '@/lib/formatters'
 
 const ACTION_LABELS: Record<string, { label: string; color: string }> = {
-  'credential.created': { label: 'Key Created', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' },
-  'credential.viewed': { label: 'Key Viewed', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' },
-  'credential.rotated': { label: 'Key Rotated', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' },
-  'credential.deleted': { label: 'Key Deleted', color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' },
-  'api.created': { label: 'API Created', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' },
-  'api.updated': { label: 'API Updated', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' },
-  'api.deleted': { label: 'API Deleted', color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' },
+  'credential.created': { label: 'Key Created', color: 'bg-success-subtle text-success' },
+  'credential.viewed': { label: 'Key Viewed', color: 'bg-info-subtle text-info' },
+  'credential.rotated': { label: 'Key Rotated', color: 'bg-warning-subtle text-warning' },
+  'credential.deleted': { label: 'Key Deleted', color: 'bg-error-subtle text-error' },
+  'api.created': { label: 'API Created', color: 'bg-success-subtle text-success' },
+  'api.updated': { label: 'API Updated', color: 'bg-info-subtle text-info' },
+  'api.deleted': { label: 'API Deleted', color: 'bg-error-subtle text-error' },
 }
 
 const PAGE_SIZE = 25

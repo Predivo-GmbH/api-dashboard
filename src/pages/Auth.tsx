@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { KeyRound } from 'lucide-react'
+import { Shield } from 'lucide-react'
 
 export default function Auth() {
   const navigate = useNavigate()
@@ -30,12 +30,12 @@ export default function Auth() {
 
   return (
     <div className="flex min-h-svh items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm rounded-xl">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <KeyRound className="h-6 w-6 text-primary" />
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
+            <span className="font-mono text-lg font-bold text-primary-foreground">[·]</span>
           </div>
-          <CardTitle>API Dashboard</CardTitle>
+          <CardTitle className="text-xl font-bold">Welcome back</CardTitle>
           <CardDescription>Sign in to manage your APIs</CardDescription>
         </CardHeader>
         <CardContent>
@@ -69,6 +69,10 @@ export default function Auth() {
               {loading ? 'Signing in...' : 'Sign in'}
             </Button>
           </form>
+          <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <Shield className="h-3 w-3" />
+            Protected by AES-256 encryption
+          </p>
         </CardContent>
       </Card>
     </div>

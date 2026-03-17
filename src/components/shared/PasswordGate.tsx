@@ -31,10 +31,10 @@ export function PasswordGate({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-svh items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm rounded-xl">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <Lock className="h-6 w-6 text-primary" />
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
+            <Lock className="h-5 w-5 text-primary-foreground" />
           </div>
           <CardTitle>API Dashboard</CardTitle>
           <CardDescription>Enter password to continue</CardDescription>

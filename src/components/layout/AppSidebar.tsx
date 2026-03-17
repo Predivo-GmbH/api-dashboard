@@ -37,7 +37,7 @@ export function AppSidebar({ className, onNavigate }: AppSidebarProps) {
       )}
     >
       <div className="flex h-14 items-center gap-2 px-4 font-semibold">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-teal-500 text-white text-sm font-bold">
+        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-sm font-bold">
           A
         </div>
         <span>API Dashboard</span>

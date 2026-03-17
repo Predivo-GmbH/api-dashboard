@@ -42,21 +42,21 @@ function StatsCards() {
       value: stats?.totalApis ?? 0,
       sub: `${stats?.activeApis ?? 0} active`,
       icon: Key,
-      color: 'text-blue-600 dark:text-blue-400',
+      color: 'text-info',
     },
     {
       label: 'Healthy',
       value: stats?.healthyApis ?? 0,
       sub: stats?.unhealthyApis ? `${stats.unhealthyApis} unhealthy` : 'All good',
       icon: Activity,
-      color: stats?.unhealthyApis ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400',
+      color: stats?.unhealthyApis ? 'text-warning' : 'text-success',
     },
     {
       label: 'Monthly Cost',
       value: formatCurrency(stats?.totalMonthlyCost ?? 0),
       sub: `${stats?.upcomingRenewals ?? 0} upcoming renewals`,
       icon: DollarSign,
-      color: 'text-emerald-600 dark:text-emerald-400',
+      color: 'text-success',
     },
     {
       label: 'Active Alerts',
@@ -225,13 +225,11 @@ function RecentAlertsList() {
               key={alert.id}
               className="flex items-start gap-3 rounded-lg border p-3"
             >
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-yellow-500" />
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
               <div className="min-w-0">
                 <p className="text-sm font-medium">{alert.message}</p>
                 <p className="text-xs text-muted-foreground">
-                  {(alert as Record<string, unknown>).api_entries
-                    ? String(((alert as Record<string, unknown>).api_entries as Record<string, unknown>)?.name ?? '')
-                    : ''}
+                  {(alert as { api_entries?: { name?: string } }).api_entries?.name ?? ''}
                   {' '}
                   &middot; {formatRelativeTime(alert.sent_at)}
                 </p>
@@ -276,7 +274,7 @@ function QuotaWarnings() {
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">{api.name}</p>
                 <span className={`text-sm font-bold ${
-                  api.quota_usage_pct! >= 95 ? 'text-destructive' : 'text-yellow-600 dark:text-yellow-400'
+                  api.quota_usage_pct! >= 95 ? 'text-destructive' : 'text-warning'
                 }`}>
                   {api.quota_usage_pct}%
                 </span>
@@ -284,7 +282,7 @@ function QuotaWarnings() {
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
                 <div
                   className={`h-full rounded-full transition-all ${
-                    api.quota_usage_pct! >= 95 ? 'bg-destructive' : 'bg-yellow-500'
+                    api.quota_usage_pct! >= 95 ? 'bg-destructive' : 'bg-warning'
                   }`}
                   style={{ width: `${Math.min(api.quota_usage_pct!, 100)}%` }}
                 />
