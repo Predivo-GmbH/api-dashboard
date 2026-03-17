@@ -403,7 +403,7 @@ export default function ApiDetail() {
       )}
 
       <Tabs defaultValue="credentials">
-        <TabsList>
+        <TabsList className="w-full justify-start overflow-x-auto">
           <TabsTrigger value="credentials">
             Credentials
             {api.api_credentials && api.api_credentials.length > 0 && (

@@ -76,7 +76,7 @@ export default function AuditLog() {
         />
       ) : (
         <>
-          <div className="rounded-md border">
+          <div className="overflow-x-auto rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -127,10 +127,10 @@ export default function AuditLog() {
                 Page {page} of {totalPages} ({totalCount} entries)
               </p>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page <= 1}>
+                <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page <= 1} aria-label="Previous page">
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages}>
+                <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages} aria-label="Next page">
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>

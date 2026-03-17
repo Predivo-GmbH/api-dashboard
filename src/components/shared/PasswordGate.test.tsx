@@ -14,7 +14,7 @@ describe('PasswordGate', () => {
       </PasswordGate>
     )
 
-    expect(screen.getByText('API Dashboard')).toBeInTheDocument()
+    expect(screen.getByText('Predivo APIs')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('Password')).toBeInTheDocument()
     expect(screen.queryByText('Protected Content')).not.toBeInTheDocument()
   })

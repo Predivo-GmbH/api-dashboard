@@ -14,7 +14,11 @@ export function AppLayout() {
       {mobileOpen && (
         <div
           className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden"
+          role="button"
+          aria-label="Close menu"
+          tabIndex={-1}
           onClick={() => setMobileOpen(false)}
+          onKeyDown={(e) => e.key === 'Escape' && setMobileOpen(false)}
         />
       )}
 
@@ -35,11 +39,17 @@ export function AppLayout() {
           <Button
             variant="ghost"
             size="icon"
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
             onClick={() => setMobileOpen(!mobileOpen)}
           >
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
-          <span className="ml-2 font-semibold">API Dashboard</span>
+          <div className="ml-2 flex items-center gap-2 font-semibold">
+            <div className="flex h-6 w-6 items-center justify-center rounded bg-primary">
+              <span className="font-mono text-xs font-bold text-primary-foreground">[·]</span>
+            </div>
+            Predivo APIs
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">

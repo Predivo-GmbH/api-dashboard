@@ -22,6 +22,7 @@ export default function NotificationSettings() {
               type="email"
               placeholder="roger@predivo.ch"
               defaultValue="roger@predivo.ch"
+              disabled
             />
             <p className="text-xs text-muted-foreground">
               This email receives all alerts unless overridden per-API.
@@ -32,19 +33,19 @@ export default function NotificationSettings() {
             <h3 className="text-sm font-medium">Alert Types</h3>
             {Object.entries(ALERT_TYPES).map(([key, config]) => (
               <div key={key} className="flex items-center justify-between">
-                <div>
+                <Label htmlFor={`alert-${key}`} className="cursor-pointer">
                   <p className="text-sm font-medium">{config.label}</p>
-                  <p className="text-xs text-muted-foreground">{config.description}</p>
-                </div>
-                <Switch defaultChecked />
+                  <p className="text-xs font-normal text-muted-foreground">{config.description}</p>
+                </Label>
+                <Switch id={`alert-${key}`} defaultChecked disabled />
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
 
-      <p className="text-xs text-muted-foreground">
-        Alert delivery requires the send-alerts edge function to be deployed (Phase 3).
+      <p className="rounded-md border border-border bg-muted/50 p-3 text-xs text-muted-foreground">
+        Notification settings are read-only until the send-alerts edge function is deployed (Phase 3).
       </p>
     </div>
   )

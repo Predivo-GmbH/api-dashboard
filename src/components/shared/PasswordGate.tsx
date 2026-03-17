@@ -36,7 +36,7 @@ export function PasswordGate({ children }: { children: ReactNode }) {
           <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
             <Lock className="h-5 w-5 text-primary-foreground" />
           </div>
-          <CardTitle>API Dashboard</CardTitle>
+          <CardTitle>Predivo APIs</CardTitle>
           <CardDescription>Enter password to continue</CardDescription>
         </CardHeader>
         <CardContent>

@@ -93,7 +93,7 @@ export default function Landing() {
       <footer className="mt-auto border-t border-border">
         <div className="mx-auto max-w-5xl px-6 py-6">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Predivo API Dashboard</span>
+            <span>&copy; {new Date().getFullYear()} Predivo GmbH</span>
             <span className="flex items-center gap-1">
               <Shield className="h-3 w-3" />
               Internal tool — AES-256 encrypted

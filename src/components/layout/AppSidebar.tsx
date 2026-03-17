@@ -37,10 +37,10 @@ export function AppSidebar({ className, onNavigate }: AppSidebarProps) {
       )}
     >
       <div className="flex h-14 items-center gap-2 px-4 font-semibold">
-        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-sm font-bold">
-          A
+        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
+          <span className="font-mono text-sm font-bold">[·]</span>
         </div>
-        <span>API Dashboard</span>
+        <span>Predivo APIs</span>
       </div>
 
       <Separator />
@@ -70,7 +70,7 @@ export function AppSidebar({ className, onNavigate }: AppSidebarProps) {
 
       <div className="flex items-center justify-between p-2">
         <ThemeToggle />
-        <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
+        <Button variant="ghost" size="icon" onClick={signOut} aria-label="Sign out">
           <LogOut className="h-4 w-4" />
         </Button>
       </div>
