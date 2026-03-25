@@ -52,31 +52,29 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function GatedRoutes() {
   return (
-    <PasswordGate>
-      <Routes>
-        <Route
-          element={
-            <ProtectedRoute>
-              <AppLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/apis" element={<ApiInventory />} />
-          <Route path="/apis/new" element={<ApiForm />} />
-          <Route path="/apis/:id" element={<ApiDetail />} />
-          <Route path="/apis/:id/edit" element={<ApiForm />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/projects/:id" element={<ProjectDetail />} />
-          <Route path="/audit" element={<AuditLog />} />
-          <Route path="/settings" element={<Settings />}>
-            <Route index element={<AccountSettings />} />
-            <Route path="notifications" element={<NotificationSettings />} />
-          </Route>
+    <Routes>
+      <Route
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/apis" element={<ApiInventory />} />
+        <Route path="/apis/new" element={<ApiForm />} />
+        <Route path="/apis/:id" element={<ApiDetail />} />
+        <Route path="/apis/:id/edit" element={<ApiForm />} />
+        <Route path="/projects" element={<Projects />} />
+        <Route path="/projects/:id" element={<ProjectDetail />} />
+        <Route path="/audit" element={<AuditLog />} />
+        <Route path="/settings" element={<Settings />}>
+          <Route index element={<AccountSettings />} />
+          <Route path="notifications" element={<NotificationSettings />} />
         </Route>
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </PasswordGate>
+      </Route>
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   )
 }
 
@@ -86,21 +84,23 @@ function AppRoutes() {
   if (loading) return <Loading />
 
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          user ? <Navigate to="/dashboard" replace /> : <Landing />
-        }
-      />
-      <Route
-        path="/auth"
-        element={
-          user ? <Navigate to="/dashboard" replace /> : <Auth />
-        }
-      />
-      <Route path="/*" element={<GatedRoutes />} />
-    </Routes>
+    <PasswordGate>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            user ? <Navigate to="/dashboard" replace /> : <Landing />
+          }
+        />
+        <Route
+          path="/auth"
+          element={
+            user ? <Navigate to="/dashboard" replace /> : <Auth />
+          }
+        />
+        <Route path="/*" element={<GatedRoutes />} />
+      </Routes>
+    </PasswordGate>
   )
 }
 
