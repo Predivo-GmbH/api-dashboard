@@ -4,8 +4,15 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Lock } from 'lucide-react'
 
-const GATE_PASSWORD = 'predivoapidash2026'
+const PASSWORD_HASH = '3bd8037a8ed38a35825983767f94e6cf3b18c3deee1601daee71faec0d83565f'
 const STORAGE_KEY = 'api-dashboard-unlocked'
+
+async function sha256(message: string): Promise<string> {
+  const msgBuffer = new TextEncoder().encode(message)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+}
 
 function isUnlocked(): boolean {
   return sessionStorage.getItem(STORAGE_KEY) === 'true'
@@ -18,9 +25,10 @@ export function PasswordGate({ children }: { children: ReactNode }) {
 
   if (unlocked) return <>{children}</>
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (password === GATE_PASSWORD) {
+    const inputHash = await sha256(password)
+    if (inputHash === PASSWORD_HASH) {
       sessionStorage.setItem(STORAGE_KEY, 'true')
       setUnlocked(true)
     } else {
