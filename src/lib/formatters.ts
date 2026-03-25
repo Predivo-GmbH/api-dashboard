@@ -54,3 +54,37 @@ export function daysUntil(date: string | Date): number {
 export function maskSecret(hint: string): string {
   return `****${hint}`
 }
+
+export function formatRemaining(remaining: number, unit: string): string {
+  const cleanUnit = unit.replace(/\/month|\/day/g, '').trim()
+  return `${formatNumber(remaining)} ${cleanUnit} left`
+}
+
+export function daysUntilEndOfMonth(): number {
+  const now = new Date()
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  return Math.max(1, Math.ceil((endOfMonth.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+}
+
+export function estimateRunOut(
+  used: number,
+  limit: number,
+  periodStartDate: string,
+): string | null {
+  if (used <= 0 || limit <= 0) return null
+  const now = new Date()
+  const periodStart = new Date(periodStartDate)
+  const daysElapsed = Math.max(1, Math.ceil((now.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)))
+  const dailyRate = used / daysElapsed
+  if (dailyRate <= 0) return null
+
+  const remaining = limit - used
+  const daysUntilExhausted = remaining / dailyRate
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  const daysLeft = Math.ceil((endOfMonth.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (daysUntilExhausted > daysLeft) return null // on track
+
+  const runOutDate = new Date(now.getTime() + daysUntilExhausted * 24 * 60 * 60 * 1000)
+  return `May run out ~${formatDate(runOutDate)}`
+}

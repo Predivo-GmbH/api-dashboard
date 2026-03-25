@@ -1,21 +1,25 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
+interface LowestRemaining {
+  name: string
+  remaining: number
+  unit: string
+  pct: number
+}
+
 interface DashboardStats {
-  totalApis: number
-  activeApis: number
-  healthyApis: number
-  unhealthyApis: number
-  totalMonthlyCost: number
+  apisRunningLow: number
+  lowestRemaining: LowestRemaining | null
+  payAsYouGoCount: number
+  payAsYouGoSpend: number
   activeAlerts: number
-  upcomingRenewals: number
 }
 
 export function useDashboardStats() {
   return useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async (): Promise<DashboardStats> => {
-      // Fetch API overview for aggregation
       const { data: apis, error: apiErr } = await supabase
         .from('v_api_overview')
         .select('*')
@@ -23,18 +27,46 @@ export function useDashboardStats() {
       if (apiErr) throw apiErr
 
       const entries = apis ?? []
-      const totalApis = entries.length
-      const activeApis = entries.filter(a => a.status === 'active').length
-      const healthyApis = entries.filter(a => a.health_status === 'up').length
-      const unhealthyApis = entries.filter(a => a.health_status === 'down' || a.health_status === 'degraded').length
 
-      // Sum monthly costs from subscriptions
-      const totalMonthlyCost = entries.reduce((sum, a) => {
-        if (!a.cost_per_period) return sum
-        return sum + Number(a.cost_per_period)
-      }, 0)
+      // APIs running low (>=70% quota usage)
+      const apisRunningLow = entries.filter(
+        a => a.quota_usage_pct !== null && a.quota_usage_pct >= 70
+      ).length
 
-      // Count active alerts (triggered but not acknowledged)
+      // Find the API closest to exhaustion
+      const withQuota = entries
+        .filter(a => a.quota_limit && a.quota_limit > 0 && a.current_usage !== null)
+        .map(a => ({
+          name: a.name,
+          remaining: a.quota_limit! - (a.current_usage ?? 0),
+          unit: a.quota_unit ?? 'credits',
+          pct: a.quota_usage_pct ?? 0,
+        }))
+        .sort((a, b) => b.pct - a.pct)
+
+      const lowestRemaining = withQuota.length > 0 ? withQuota[0] : null
+
+      // Pay-as-you-go APIs (no hard quota)
+      const payAsYouGoApis = entries.filter(
+        a => a.billing_model === 'pay_as_you_go' && (a.quota_limit === null || a.quota_limit === 0)
+      )
+      const payAsYouGoCount = payAsYouGoApis.length
+
+      // Get actual spend from usage_records for pay-as-you-go APIs this month
+      const now = new Date()
+      const periodStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+
+      const { data: usageRecords } = await supabase
+        .from('usage_records')
+        .select('cost')
+        .eq('source', 'api_import')
+        .eq('period_start', periodStart)
+
+      const payAsYouGoSpend = (usageRecords ?? []).reduce(
+        (sum, r) => sum + Number(r.cost), 0
+      )
+
+      // Count active alerts
       const { count: activeAlerts, error: alertErr } = await supabase
         .from('triggered_alerts')
         .select('*', { count: 'exact', head: true })
@@ -42,22 +74,12 @@ export function useDashboardStats() {
 
       if (alertErr) throw alertErr
 
-      // Count upcoming renewals (next 30 days)
-      const thirtyDaysFromNow = new Date()
-      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30)
-      const upcomingRenewals = entries.filter(a => {
-        if (!a.renewal_date) return false
-        return new Date(a.renewal_date) <= thirtyDaysFromNow
-      }).length
-
       return {
-        totalApis,
-        activeApis,
-        healthyApis,
-        unhealthyApis,
-        totalMonthlyCost,
+        apisRunningLow,
+        lowestRemaining,
+        payAsYouGoCount,
+        payAsYouGoSpend,
         activeAlerts: activeAlerts ?? 0,
-        upcomingRenewals,
       }
     },
   })
@@ -73,6 +95,7 @@ export function useRecentAlerts() {
           *,
           api_entries:api_entry_id (name, provider)
         `)
+        .is('acknowledged_at', null)
         .order('sent_at', { ascending: false })
         .limit(10)
 

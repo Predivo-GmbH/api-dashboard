@@ -57,11 +57,13 @@ export interface ApiOverview {
   category: ApiCategory
   status: ApiStatus
   account_owner: string | null
+  billing_model: BillingModel | null
   health_status: HealthStatus | null
   health_response_ms: number | null
   last_health_check: string | null
   plan_name: string | null
   quota_limit: number | null
+  quota_unit: string | null
   current_usage: number | null
   renewal_date: string | null
   cost_per_period: number | null
