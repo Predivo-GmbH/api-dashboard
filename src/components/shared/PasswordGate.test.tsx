@@ -29,7 +29,7 @@ describe('PasswordGate', () => {
     )
 
     const input = screen.getByPlaceholderText('Password')
-    await user.type(input, 'predivoapidash2026')
+    await user.type(input, 'predivo2026')
     await user.click(screen.getByRole('button', { name: 'Unlock' }))
 
     expect(screen.getByText('Protected Content')).toBeInTheDocument()
