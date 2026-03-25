@@ -38,6 +38,8 @@ export function useSyncUsage() {
 
       queryClient.invalidateQueries({ queryKey: ['apis'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['usage-current-month'] })
+      queryClient.invalidateQueries({ queryKey: ['last-sync-time'] })
 
       if (failed === 0) {
         toast.success(`Usage synced — ${succeeded} provider${succeeded !== 1 ? 's' : ''} updated`)

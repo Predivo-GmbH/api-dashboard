@@ -9,6 +9,7 @@ import {
   ArrowRight,
   AlertTriangle,
   RefreshCw,
+  Zap,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -18,10 +19,12 @@ import { HealthStatusBadge } from '@/components/shared/StatusBadge'
 import { useDashboardStats, useRecentAlerts } from '@/hooks/useDashboardStats'
 import { useApiList } from '@/hooks/useApis'
 import { useSyncUsage } from '@/hooks/useSyncUsage'
-import { formatCurrency, formatRelativeTime, daysUntil, formatDate } from '@/lib/formatters'
+import { useCurrentMonthUsage, useLastSyncTime } from '@/hooks/useUsageRecords'
+import { formatCurrency, formatRelativeTime, formatNumber, daysUntil, formatDate } from '@/lib/formatters'
 
 function StatsCards() {
   const { data: stats, isLoading } = useDashboardStats()
+  const { data: usage } = useCurrentMonthUsage()
 
   if (isLoading) {
     return (
@@ -37,6 +40,11 @@ function StatsCards() {
       </div>
     )
   }
+
+  // Sum actual costs from usage_records (api_import) for this month
+  const actualCost = usage?.reduce((sum, u) => sum + Number(u.cost), 0) ?? 0
+  const subscriptionCost = stats?.totalMonthlyCost ?? 0
+  const totalCost = actualCost + subscriptionCost
 
   const cards = [
     {
@@ -55,8 +63,10 @@ function StatsCards() {
     },
     {
       label: 'Monthly Cost',
-      value: formatCurrency(stats?.totalMonthlyCost ?? 0),
-      sub: `${stats?.upcomingRenewals ?? 0} upcoming renewals`,
+      value: formatCurrency(totalCost),
+      sub: actualCost > 0
+        ? `${formatCurrency(actualCost)} usage + ${formatCurrency(subscriptionCost)} subscriptions`
+        : `${stats?.upcomingRenewals ?? 0} upcoming renewals`,
       icon: DollarSign,
       color: 'text-success',
     },
@@ -84,6 +94,167 @@ function StatsCards() {
         </Card>
       ))}
     </div>
+  )
+}
+
+function UsageThisMonth() {
+  const { data: usage, isLoading } = useCurrentMonthUsage()
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Usage This Month</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-20" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!usage || usage.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Usage This Month</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            No usage data yet. Click &ldquo;Sync Now&rdquo; to fetch live data from your providers.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Usage This Month</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {usage.map((record) => {
+            const sub = record.subscription
+            const hasQuota = sub && sub.quota_limit && sub.quota_limit > 0
+            const usagePct = hasQuota
+              ? Math.round((record.credits_used ?? 0) / sub!.quota_limit! * 100)
+              : null
+            const meta = record.metadata ?? {}
+
+            return (
+              <Link
+                key={record.id}
+                to={`/apis/${record.api_entry_id}`}
+                className="block rounded-lg border p-4 transition-colors hover:bg-muted/50"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">{record.api_entries.name}</p>
+                    <p className="text-xs text-muted-foreground">{record.api_entries.provider}</p>
+                  </div>
+                  <div className="text-right">
+                    {Number(record.cost) > 0 && (
+                      <p className="text-sm font-bold">{formatCurrency(Number(record.cost))}</p>
+                    )}
+                    {usagePct !== null && (
+                      <Badge
+                        variant={usagePct >= 90 ? 'destructive' : usagePct >= 70 ? 'outline' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {usagePct}%
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Usage details */}
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  {record.api_entries.name === 'Anthropic Claude' ? (
+                    <>
+                      <span>Input: {formatNumber(Number(meta.total_input_tokens ?? 0))} tokens</span>
+                      <span>Output: {formatNumber(Number(meta.total_output_tokens ?? 0))} tokens</span>
+                      {Number(meta.total_cache_read_tokens ?? 0) > 0 && (
+                        <span>Cache: {formatNumber(Number(meta.total_cache_read_tokens))} tokens</span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {record.credits_used !== null && (
+                        <span>
+                          {formatNumber(record.credits_used)}
+                          {hasQuota ? ` / ${formatNumber(sub!.quota_limit!)}` : ''}{' '}
+                          {sub?.quota_unit ?? 'credits'}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Progress bar for APIs with quotas */}
+                {hasQuota && (
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        usagePct! >= 90 ? 'bg-destructive' : usagePct! >= 70 ? 'bg-warning' : 'bg-primary'
+                      }`}
+                      style={{ width: `${Math.min(usagePct!, 100)}%` }}
+                    />
+                  </div>
+                )}
+              </Link>
+            )
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function ApisByCategory() {
+  const { data: apis, isLoading } = useApiList()
+
+  if (isLoading) return null
+
+  const entries = apis ?? []
+  const categories = entries.reduce<Record<string, number>>((acc, api) => {
+    const cat = api.category || 'other'
+    acc[cat] = (acc[cat] ?? 0) + 1
+    return acc
+  }, {})
+
+  const sorted = Object.entries(categories).sort((a, b) => b[1] - a[1])
+  if (sorted.length === 0) return null
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">APIs by Category</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {sorted.map(([cat, count]) => (
+            <div key={cat} className="flex items-center justify-between">
+              <span className="text-sm capitalize">{cat}</span>
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-primary"
+                    style={{ width: `${(count / entries.length) * 100}%` }}
+                  />
+                </div>
+                <span className="w-6 text-right text-xs text-muted-foreground">{count}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -302,6 +473,7 @@ function QuotaWarnings() {
 
 export default function Dashboard() {
   const syncUsage = useSyncUsage()
+  const { data: lastSync } = useLastSyncTime()
 
   return (
     <div className="space-y-6 p-6">
@@ -310,23 +482,35 @@ export default function Dashboard() {
           <LayoutDashboard className="h-6 w-6" />
           <h1 className="text-2xl font-bold">Dashboard</h1>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => syncUsage.mutate()}
-          disabled={syncUsage.isPending}
-        >
-          <RefreshCw className={`mr-2 h-4 w-4 ${syncUsage.isPending ? 'animate-spin' : ''}`} />
-          {syncUsage.isPending ? 'Syncing…' : 'Sync Now'}
-        </Button>
+        <div className="flex items-center gap-3">
+          {lastSync && (
+            <span className="text-xs text-muted-foreground">
+              <Zap className="mr-1 inline h-3 w-3" />
+              Synced {formatRelativeTime(lastSync)}
+            </span>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => syncUsage.mutate()}
+            disabled={syncUsage.isPending}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${syncUsage.isPending ? 'animate-spin' : ''}`} />
+            {syncUsage.isPending ? 'Syncing…' : 'Sync Now'}
+          </Button>
+        </div>
       </div>
 
       <StatsCards />
+
+      {/* Usage section — full width */}
+      <UsageThisMonth />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <ApiStatusGrid />
         <div className="space-y-6">
           <QuotaWarnings />
+          <ApisByCategory />
           <UpcomingRenewals />
           <RecentAlertsList />
         </div>
