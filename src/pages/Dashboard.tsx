@@ -8,6 +8,7 @@ import {
   Calendar,
   ArrowRight,
   AlertTriangle,
+  RefreshCw,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { HealthStatusBadge } from '@/components/shared/StatusBadge'
 import { useDashboardStats, useRecentAlerts } from '@/hooks/useDashboardStats'
 import { useApiList } from '@/hooks/useApis'
+import { useSyncUsage } from '@/hooks/useSyncUsage'
 import { formatCurrency, formatRelativeTime, daysUntil, formatDate } from '@/lib/formatters'
 
 function StatsCards() {
@@ -299,11 +301,24 @@ function QuotaWarnings() {
 }
 
 export default function Dashboard() {
+  const syncUsage = useSyncUsage()
+
   return (
     <div className="space-y-6 p-6">
-      <div className="flex items-center gap-3">
-        <LayoutDashboard className="h-6 w-6" />
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <LayoutDashboard className="h-6 w-6" />
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => syncUsage.mutate()}
+          disabled={syncUsage.isPending}
+        >
+          <RefreshCw className={`mr-2 h-4 w-4 ${syncUsage.isPending ? 'animate-spin' : ''}`} />
+          {syncUsage.isPending ? 'Syncing…' : 'Sync Now'}
+        </Button>
       </div>
 
       <StatsCards />
