@@ -121,6 +121,38 @@ async function fetchAnthropicUsage(): Promise<ProviderResult> {
   const estimatedCost = (totalInputTokens * 3 + totalOutputTokens * 15
     + totalCacheCreationTokens * 3.75 + totalCacheReadTokens * 0.3) / 1_000_000
 
+  // Also fetch cost report for accurate spend tracking
+  let totalSpend = 0
+  try {
+    const costParams = new URLSearchParams({
+      starting_at: startOfMonth.toISOString(),
+      ending_at: endOfMonth.toISOString(),
+      bucket_width: '1mo',
+    })
+    const costRes = await fetch(
+      `https://api.anthropic.com/v1/organizations/cost_report?${costParams}`,
+      {
+        headers: {
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+        },
+      },
+    )
+    if (costRes.ok) {
+      const costData = await costRes.json()
+      if (Array.isArray(costData.data)) {
+        for (const bucket of costData.data) {
+          for (const item of (bucket.results ?? [])) {
+            totalSpend += item.amount ?? 0
+          }
+        }
+      }
+    }
+  } catch {
+    // Cost report is best-effort — fall back to estimated cost
+    totalSpend = Math.round(estimatedCost * 100) / 100
+  }
+
   return {
     provider: 'Anthropic',
     success: true,
@@ -130,6 +162,7 @@ async function fetchAnthropicUsage(): Promise<ProviderResult> {
       total_cache_creation_tokens: totalCacheCreationTokens,
       total_cache_read_tokens: totalCacheReadTokens,
       estimated_cost_usd: Math.round(estimatedCost * 100) / 100,
+      actual_spend_usd: Math.round(totalSpend * 100) / 100,
       period_start: startOfMonth.toISOString().split('T')[0],
       period_end: now.toISOString().split('T')[0],
     },
@@ -151,7 +184,6 @@ Deno.serve(async (req: Request) => {
   let userId = 'system'
 
   if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
-    // Cron job — no user auth needed
     userId = 'cron'
   } else if (authHeader) {
     const admin = getSupabaseAdmin()
@@ -167,7 +199,6 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // Optionally filter to specific providers
     let providers: string[] = ['serpapi', 'firecrawl', 'anthropic']
     try {
       const body = await req.json()
@@ -181,7 +212,6 @@ Deno.serve(async (req: Request) => {
     const admin = getSupabaseAdmin()
     const results: ProviderResult[] = []
 
-    // Fetch usage from all requested providers in parallel
     const fetchers: Promise<ProviderResult>[] = []
     if (providers.includes('serpapi')) fetchers.push(fetchSerpApiUsage())
     if (providers.includes('firecrawl')) fetchers.push(fetchFirecrawlUsage())
@@ -196,7 +226,6 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Write successful results to usage_records and update subscriptions
     const now = new Date()
     const periodStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
     const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
@@ -204,7 +233,6 @@ Deno.serve(async (req: Request) => {
     for (const result of results) {
       if (!result.success) continue
 
-      // Look up api_entry_id by provider name
       const apiName = result.provider === 'Anthropic' ? 'Anthropic Claude' : result.provider
       const { data: apiEntry } = await admin
         .from('api_entries')
@@ -217,24 +245,52 @@ Deno.serve(async (req: Request) => {
       let callCount = 0
       let creditsUsed: number | null = null
       let cost = 0
+      let creditsRemaining: number | null = null
 
       if (result.provider === 'SerpAPI') {
         callCount = result.data!.this_month_usage as number
-        creditsUsed = callCount // credits_used = searches consumed
+        creditsUsed = callCount
+        creditsRemaining = (result.data!.total_searches_left as number) ?? null
       } else if (result.provider === 'Firecrawl') {
         const planCredits = (result.data!.plan_credits as number) ?? 0
         const remaining = (result.data!.remaining_credits as number) ?? 0
-        // If plan_credits is 0 (free/one-time), just track remaining
         callCount = planCredits > 0 ? planCredits - remaining : 0
-        creditsUsed = planCredits > 0 ? planCredits - remaining : 0
+        creditsUsed = callCount
+        creditsRemaining = remaining
       } else if (result.provider === 'Anthropic') {
         callCount = (result.data!.total_input_tokens as number) + (result.data!.total_output_tokens as number)
-        creditsUsed = callCount // total tokens consumed
+        creditsUsed = callCount
         cost = (result.data!.estimated_cost_usd as number) ?? 0
+
+        // Compute remaining from credit snapshot
+        const actualSpend = (result.data!.actual_spend_usd as number) ?? cost
+        const { data: snapshot } = await admin
+          .from('credit_snapshots')
+          .select('balance, snapshot_at')
+          .eq('api_entry_id', apiEntry.id)
+          .single()
+
+        if (snapshot) {
+          // Get all spend since snapshot date using usage_records
+          const { data: priorRecords } = await admin
+            .from('usage_records')
+            .select('cost')
+            .eq('api_entry_id', apiEntry.id)
+            .eq('source', 'api_import')
+            .lt('period_start', periodStart)
+            .gt('recorded_at', snapshot.snapshot_at)
+
+          const priorSpend = (priorRecords ?? []).reduce(
+            (sum: number, r: { cost: number }) => sum + Number(r.cost), 0
+          )
+
+          creditsRemaining = Math.max(0,
+            Math.round((snapshot.balance - priorSpend - actualSpend) * 100) / 100
+          )
+        }
       }
 
-      // Upsert usage record for current month
-      // First check if one exists for this month
+      // Upsert usage record
       const { data: existing } = await admin
         .from('usage_records')
         .select('id')
@@ -264,20 +320,15 @@ Deno.serve(async (req: Request) => {
         })
       }
 
-      // Update subscription current_usage if subscription exists
-      if (result.provider === 'SerpAPI') {
-        const usage = result.data!.this_month_usage as number
-        await admin.from('subscriptions')
-          .update({ current_usage: usage })
-          .eq('api_entry_id', apiEntry.id)
-      } else if (result.provider === 'Firecrawl') {
-        const planCredits = (result.data!.plan_credits as number) ?? 0
-        const remaining = (result.data!.remaining_credits as number) ?? 0
-        const used = planCredits > 0 ? planCredits - remaining : 0
-        await admin.from('subscriptions')
-          .update({ current_usage: used })
-          .eq('api_entry_id', apiEntry.id)
+      // Update subscription: current_usage + credits_remaining
+      const subUpdate: Record<string, unknown> = { current_usage: creditsUsed ?? 0 }
+      if (creditsRemaining !== null) {
+        subUpdate.credits_remaining = creditsRemaining
       }
+
+      await admin.from('subscriptions')
+        .update(subUpdate)
+        .eq('api_entry_id', apiEntry.id)
     }
 
     await logAudit(admin, userId, 'usage.synced', 'usage_records', 'batch', {

@@ -65,6 +65,7 @@ export interface ApiOverview {
   quota_limit: number | null
   quota_unit: string | null
   current_usage: number | null
+  credits_remaining: number | null
   renewal_date: string | null
   cost_per_period: number | null
   quota_usage_pct: number | null

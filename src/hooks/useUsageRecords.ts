@@ -22,6 +22,7 @@ export interface UsageWithApi {
     quota_limit: number | null
     quota_unit: string
     current_usage: number
+    credits_remaining: number | null
     plan_name: string
   } | null
 }
@@ -51,7 +52,7 @@ export function useCurrentMonthUsage() {
       const apiIds = records.map((r: { api_entry_id: string }) => r.api_entry_id)
       const { data: subs } = await supabase
         .from('subscriptions')
-        .select('api_entry_id, quota_limit, quota_unit, current_usage, plan_name')
+        .select('api_entry_id, quota_limit, quota_unit, current_usage, credits_remaining, plan_name')
         .in('api_entry_id', apiIds)
 
       const subMap = new Map(

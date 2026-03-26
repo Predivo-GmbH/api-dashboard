@@ -1,18 +1,23 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
-interface LowestRemaining {
+interface CreditBalance {
+  id: string
   name: string
-  remaining: number
-  unit: string
-  pct: number
+  provider: string
+  credits_remaining: number
+  current_usage: number
+  quota_limit: number | null
+  quota_unit: string | null
+  billing_model: string | null
+  cost_per_period: number | null
+  renewal_date: string | null
 }
 
 interface DashboardStats {
+  balances: CreditBalance[]
   apisRunningLow: number
-  lowestRemaining: LowestRemaining | null
-  payAsYouGoCount: number
-  payAsYouGoSpend: number
+  mostUrgent: CreditBalance | null
   activeAlerts: number
 }
 
@@ -28,43 +33,45 @@ export function useDashboardStats() {
 
       const entries = apis ?? []
 
-      // APIs running low (>=70% quota usage)
-      const apisRunningLow = entries.filter(
-        a => a.quota_usage_pct !== null && a.quota_usage_pct >= 70
-      ).length
-
-      // Find the API closest to exhaustion
-      const withQuota = entries
-        .filter(a => a.quota_limit && a.quota_limit > 0 && a.current_usage !== null)
+      // Only APIs with live credits_remaining data
+      const balances: CreditBalance[] = entries
+        .filter(a => a.credits_remaining !== null && a.credits_remaining !== undefined)
         .map(a => ({
+          id: a.id,
           name: a.name,
-          remaining: a.quota_limit! - (a.current_usage ?? 0),
-          unit: a.quota_unit ?? 'credits',
-          pct: a.quota_usage_pct ?? 0,
+          provider: a.provider,
+          credits_remaining: Number(a.credits_remaining),
+          current_usage: Number(a.current_usage ?? 0),
+          quota_limit: a.quota_limit ? Number(a.quota_limit) : null,
+          quota_unit: a.quota_unit,
+          billing_model: a.billing_model,
+          cost_per_period: a.cost_per_period ? Number(a.cost_per_period) : null,
+          renewal_date: a.renewal_date,
         }))
-        .sort((a, b) => b.pct - a.pct)
 
-      const lowestRemaining = withQuota.length > 0 ? withQuota[0] : null
+      // APIs running low: remaining < 20% of quota (or < $2 for dollar-based)
+      const apisRunningLow = balances.filter(b => {
+        if (b.quota_limit && b.quota_limit > 0) {
+          return (b.credits_remaining / b.quota_limit) < 0.2
+        }
+        // Dollar-based (Anthropic): low if < $2
+        if (b.name === 'Anthropic Claude') {
+          return b.credits_remaining < 2
+        }
+        return false
+      }).length
 
-      // Pay-as-you-go APIs (no hard quota)
-      const payAsYouGoApis = entries.filter(
-        a => a.billing_model === 'pay_as_you_go' && (a.quota_limit === null || a.quota_limit === 0)
-      )
-      const payAsYouGoCount = payAsYouGoApis.length
-
-      // Get actual spend from usage_records for pay-as-you-go APIs this month
-      const now = new Date()
-      const periodStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
-
-      const { data: usageRecords } = await supabase
-        .from('usage_records')
-        .select('cost')
-        .eq('source', 'api_import')
-        .eq('period_start', periodStart)
-
-      const payAsYouGoSpend = (usageRecords ?? []).reduce(
-        (sum, r) => sum + Number(r.cost), 0
-      )
+      // Most urgent: lowest remaining percentage (or lowest dollar amount for prepaid)
+      const sorted = [...balances].sort((a, b) => {
+        const aPct = a.quota_limit && a.quota_limit > 0
+          ? a.credits_remaining / a.quota_limit
+          : a.credits_remaining / 100 // normalize dollar amounts
+        const bPct = b.quota_limit && b.quota_limit > 0
+          ? b.credits_remaining / b.quota_limit
+          : b.credits_remaining / 100
+        return aPct - bPct
+      })
+      const mostUrgent = sorted.length > 0 ? sorted[0] : null
 
       // Count active alerts
       const { count: activeAlerts, error: alertErr } = await supabase
@@ -75,10 +82,9 @@ export function useDashboardStats() {
       if (alertErr) throw alertErr
 
       return {
+        balances,
         apisRunningLow,
-        lowestRemaining,
-        payAsYouGoCount,
-        payAsYouGoSpend,
+        mostUrgent,
         activeAlerts: activeAlerts ?? 0,
       }
     },

@@ -88,3 +88,17 @@ export function estimateRunOut(
   const runOutDate = new Date(now.getTime() + daysUntilExhausted * 24 * 60 * 60 * 1000)
   return `May run out ~${formatDate(runOutDate)}`
 }
+
+export function estimateDaysLeft(
+  used: number,
+  remaining: number,
+): number | null {
+  if (remaining <= 0) return 0
+  if (used <= 0) return null
+  const now = new Date()
+  const periodStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const daysElapsed = Math.max(1, Math.ceil((now.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)))
+  const dailyRate = used / daysElapsed
+  if (dailyRate <= 0) return null
+  return Math.round(remaining / dailyRate)
+}
