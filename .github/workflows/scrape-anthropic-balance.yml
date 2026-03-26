@@ -1,0 +1,35 @@
+name: Scrape Anthropic Credit Balance
+
+on:
+  schedule:
+    - cron: '30 */6 * * *' # Every 6 hours at :30 (offset from sync-usage cron)
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+
+      - name: Install Playwright
+        run: npx playwright install chromium --with-deps
+
+      - name: Scrape Anthropic balance
+        id: scrape
+        env:
+          ANTHROPIC_SESSION_KEY: ${{ secrets.ANTHROPIC_SESSION_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/scrape-anthropic-balance.mjs
+
+      - name: Upload debug screenshot on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: anthropic-billing-debug
+          path: anthropic-billing-debug.png
+          retention-days: 3

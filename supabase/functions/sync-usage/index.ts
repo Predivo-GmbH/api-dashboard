@@ -270,33 +270,18 @@ Deno.serve(async (req: Request) => {
         creditsUsed = null
       } else if (result.provider === 'Anthropic') {
         callCount = (result.data!.total_input_tokens as number) + (result.data!.total_output_tokens as number)
-        const actualSpend = (result.data!.actual_spend_usd as number) ?? 0
-        cost = actualSpend
+        cost = (result.data!.actual_spend_usd as number) ?? 0
 
-        // Compute remaining from credit snapshot minus cumulative spend
+        // Balance is scraped from Console by GitHub Actions and stored in credit_snapshots.
+        // Just read the latest snapshot — don't try to compute from Cost Report.
         const { data: snapshot } = await admin
           .from('credit_snapshots')
-          .select('balance, snapshot_at')
+          .select('balance')
           .eq('api_entry_id', apiEntry.id)
           .single()
 
         if (snapshot) {
-          // Get spend from prior months (between snapshot and this month)
-          const { data: priorRecords } = await admin
-            .from('usage_records')
-            .select('cost')
-            .eq('api_entry_id', apiEntry.id)
-            .eq('source', 'api_import')
-            .lt('period_start', periodStart)
-            .gt('recorded_at', snapshot.snapshot_at)
-
-          const priorSpend = (priorRecords ?? []).reduce(
-            (sum: number, r: { cost: number }) => sum + Number(r.cost), 0
-          )
-
-          creditsRemaining = Math.max(0,
-            Math.round((snapshot.balance - priorSpend - actualSpend) * 100) / 100
-          )
+          creditsRemaining = snapshot.balance
         }
         creditsUsed = null // tokens aren't comparable to dollar balance
       }
