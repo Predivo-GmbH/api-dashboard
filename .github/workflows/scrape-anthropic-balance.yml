@@ -13,10 +13,10 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install Playwright
-        run: npx playwright install chromium --with-deps
+        run: npm install playwright && npx playwright install chromium --with-deps
 
       - name: Scrape Anthropic balance
         id: scrape
