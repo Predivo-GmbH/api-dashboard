@@ -121,33 +121,41 @@ async function fetchAnthropicUsage(): Promise<ProviderResult> {
   const estimatedCost = (totalInputTokens * 3 + totalOutputTokens * 15
     + totalCacheCreationTokens * 3.75 + totalCacheReadTokens * 0.3) / 1_000_000
 
-  // Also fetch cost report for accurate spend tracking
+  // Fetch cost report for accurate spend tracking (only supports '1d' buckets)
   let totalSpend = 0
+  let costNextPage: string | null = null
+  let costPageCount = 0
   try {
-    const costParams = new URLSearchParams({
-      starting_at: startOfMonth.toISOString(),
-      ending_at: endOfMonth.toISOString(),
-      bucket_width: '1mo',
-    })
-    const costRes = await fetch(
-      `https://api.anthropic.com/v1/organizations/cost_report?${costParams}`,
-      {
-        headers: {
-          'x-api-key': key,
-          'anthropic-version': '2023-06-01',
+    do {
+      const costParams = new URLSearchParams({
+        starting_at: startOfMonth.toISOString(),
+        ending_at: endOfMonth.toISOString(),
+        bucket_width: '1d',
+      })
+      if (costNextPage) costParams.set('page', costNextPage)
+
+      const costRes = await fetch(
+        `https://api.anthropic.com/v1/organizations/cost_report?${costParams}`,
+        {
+          headers: {
+            'x-api-key': key,
+            'anthropic-version': '2023-06-01',
+          },
         },
-      },
-    )
-    if (costRes.ok) {
+      )
+      if (!costRes.ok) break
+
       const costData = await costRes.json()
       if (Array.isArray(costData.data)) {
         for (const bucket of costData.data) {
           for (const item of (bucket.results ?? [])) {
-            totalSpend += item.amount ?? 0
+            totalSpend += parseFloat(item.amount) || 0
           }
         }
       }
-    }
+      costNextPage = costData.has_more ? costData.next_page : null
+      costPageCount++
+    } while (costNextPage && costPageCount < 10)
   } catch {
     // Cost report is best-effort — fall back to estimated cost
     totalSpend = Math.round(estimatedCost * 100) / 100
@@ -246,24 +254,26 @@ Deno.serve(async (req: Request) => {
       let creditsUsed: number | null = null
       let cost = 0
       let creditsRemaining: number | null = null
+      let quotaLimit: number | null = null
 
       if (result.provider === 'SerpAPI') {
+        const monthlyLimit = result.data!.searches_per_month as number
         callCount = result.data!.this_month_usage as number
         creditsUsed = callCount
         creditsRemaining = (result.data!.total_searches_left as number) ?? null
+        quotaLimit = monthlyLimit
       } else if (result.provider === 'Firecrawl') {
-        const planCredits = (result.data!.plan_credits as number) ?? 0
         const remaining = (result.data!.remaining_credits as number) ?? 0
-        callCount = planCredits > 0 ? planCredits - remaining : 0
-        creditsUsed = callCount
         creditsRemaining = remaining
+        // Firecrawl API doesn't report total plan size — only remaining
+        callCount = 0
+        creditsUsed = null
       } else if (result.provider === 'Anthropic') {
         callCount = (result.data!.total_input_tokens as number) + (result.data!.total_output_tokens as number)
-        creditsUsed = callCount
-        cost = (result.data!.estimated_cost_usd as number) ?? 0
+        const actualSpend = (result.data!.actual_spend_usd as number) ?? 0
+        cost = actualSpend
 
-        // Compute remaining from credit snapshot
-        const actualSpend = (result.data!.actual_spend_usd as number) ?? cost
+        // Compute remaining from credit snapshot minus cumulative spend
         const { data: snapshot } = await admin
           .from('credit_snapshots')
           .select('balance, snapshot_at')
@@ -271,7 +281,7 @@ Deno.serve(async (req: Request) => {
           .single()
 
         if (snapshot) {
-          // Get all spend since snapshot date using usage_records
+          // Get spend from prior months (between snapshot and this month)
           const { data: priorRecords } = await admin
             .from('usage_records')
             .select('cost')
@@ -288,6 +298,7 @@ Deno.serve(async (req: Request) => {
             Math.round((snapshot.balance - priorSpend - actualSpend) * 100) / 100
           )
         }
+        creditsUsed = null // tokens aren't comparable to dollar balance
       }
 
       // Upsert usage record
@@ -320,15 +331,17 @@ Deno.serve(async (req: Request) => {
         })
       }
 
-      // Update subscription: current_usage + credits_remaining
-      const subUpdate: Record<string, unknown> = { current_usage: creditsUsed ?? 0 }
-      if (creditsRemaining !== null) {
-        subUpdate.credits_remaining = creditsRemaining
-      }
+      // Update subscription with live data
+      const subUpdate: Record<string, unknown> = {}
+      if (creditsUsed !== null) subUpdate.current_usage = creditsUsed
+      if (creditsRemaining !== null) subUpdate.credits_remaining = creditsRemaining
+      if (quotaLimit !== null) subUpdate.quota_limit = quotaLimit
 
-      await admin.from('subscriptions')
-        .update(subUpdate)
-        .eq('api_entry_id', apiEntry.id)
+      if (Object.keys(subUpdate).length > 0) {
+        await admin.from('subscriptions')
+          .update(subUpdate)
+          .eq('api_entry_id', apiEntry.id)
+      }
     }
 
     await logAudit(admin, userId, 'usage.synced', 'usage_records', 'batch', {

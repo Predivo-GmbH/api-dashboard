@@ -144,25 +144,24 @@ function CreditBalances() {
             const isDollar = api.name === 'Anthropic Claude'
             const remaining = api.credits_remaining
             const used = api.current_usage
-            const total = api.quota_limit && api.quota_limit > 0 ? api.quota_limit : null
+            // Only show total if it's a real quota (sync updates it from live API)
+            const hasRealQuota = api.quota_limit && api.quota_limit > 0 && used > 0
+            const total = hasRealQuota ? api.quota_limit! : null
 
-            // Percentage remaining (inverted: full bar = safe)
+            // Percentage remaining
             let pctRemaining: number
             if (total) {
               pctRemaining = Math.min(100, Math.max(0, (remaining / total) * 100))
-            } else if (isDollar) {
-              // For dollar-based, we don't have a fixed total — use snapshot-relative
-              // Show as proportion of remaining to (remaining + spent equivalent)
-              const estimatedTotal = remaining + (used > 0 ? used * 0.000015 : 0) // rough token-to-dollar
-              pctRemaining = estimatedTotal > 0 ? Math.min(100, (remaining / Math.max(remaining, 10)) * 100) : 50
             } else {
-              pctRemaining = 50
+              // No total available — can't compute percentage
+              // Use a simple heuristic: treat remaining as healthy unless very low
+              pctRemaining = remaining > 0 ? 70 : 0
             }
 
-            // Burn rate
-            const daysLeft = estimateDaysLeft(used, remaining)
+            // Burn rate — only works when we have meaningful usage data
+            const daysLeft = hasRealQuota ? estimateDaysLeft(used, remaining) : null
 
-            // Color tiers based on % remaining
+            // Color tiers
             let barColor: string
             let borderColor: string
             let textColor: string
@@ -180,6 +179,24 @@ function CreditBalances() {
               textColor = 'text-emerald-600'
             }
 
+            // Format the remaining value
+            const unit = (api.quota_unit ?? 'credits').replace(/\/month|\/day/g, '').trim()
+            const remainingLabel = isDollar
+              ? `${formatCurrency(remaining)} remaining`
+              : `${formatNumber(remaining)} ${unit} left`
+
+            // Burn rate label
+            let burnLabel: string
+            if (daysLeft !== null) {
+              burnLabel = daysLeft === 0 ? 'Depleted' : `Lasts ~${daysLeft} days at current rate`
+            } else if (isDollar) {
+              burnLabel = 'Updated every sync from Cost Report API'
+            } else if (!hasRealQuota) {
+              burnLabel = 'No usage rate data yet'
+            } else {
+              burnLabel = 'Not enough data for projection'
+            }
+
             return (
               <Link
                 key={api.id}
@@ -193,32 +210,26 @@ function CreditBalances() {
                   </div>
                   <div className="text-right">
                     <p className={`text-lg font-bold ${textColor}`}>
-                      {isDollar
-                        ? `${formatCurrency(remaining)} remaining`
-                        : `${formatNumber(remaining)} ${(api.quota_unit ?? 'credits').replace(/\/month|\/day/g, '').trim()} left`}
+                      {remainingLabel}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      {daysLeft !== null
-                        ? daysLeft === 0
-                          ? 'Depleted'
-                          : `Lasts ~${daysLeft} days at current rate`
-                        : 'Not enough data for projection'}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{burnLabel}</p>
                   </div>
                 </div>
 
-                {/* Progress bar — shows what's LEFT (full = safe) */}
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={`h-full rounded-full transition-all ${barColor}`}
-                    style={{ width: `${pctRemaining}%` }}
-                  />
-                </div>
+                {/* Progress bar — only show when we have a real total */}
+                {total && (
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={`h-full rounded-full transition-all ${barColor}`}
+                      style={{ width: `${pctRemaining}%` }}
+                    />
+                  </div>
+                )}
 
-                {/* Usage context */}
+                {/* Context line — only when total is known from live API */}
                 {total && (
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {formatNumber(used)} used of {formatNumber(total)}
+                    {formatNumber(used)} used of {formatNumber(total)} this month
                   </p>
                 )}
               </Link>
