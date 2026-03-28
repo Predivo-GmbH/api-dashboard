@@ -94,9 +94,9 @@ function CredentialManager({ apiId, credentials }: { apiId: string; credentials:
           {credentials.map((cred) => (
             <div
               key={cred.id}
-              className="flex items-center justify-between rounded-lg border p-3"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
             >
-              <div className="min-w-0 space-y-1">
+              <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium">{cred.label}</p>
                   {!cred.is_active && (
@@ -120,42 +120,51 @@ function CredentialManager({ apiId, credentials }: { apiId: string; credentials:
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Added {formatDate(cred.created_at)}
-                  {cred.rotated_at && ` · Rotated ${formatDate(cred.rotated_at)}`}
+                  <span>Added {formatDate(cred.created_at)}</span>
+                  {cred.rotated_at && (
+                    <>
+                      <span className="hidden sm:inline"> · </span>
+                      <br className="sm:hidden" />
+                      <span>Rotated {formatDate(cred.rotated_at)}</span>
+                    </>
+                  )}
                 </p>
               </div>
-              <div className="flex shrink-0 items-center gap-1">
+              <div className="flex shrink-0 items-center justify-end gap-1 w-full sm:w-auto">
                 {revealedId === cred.id && revealedKey ? (
                   <>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopy(revealedKey)}>
-                      <Copy className="h-3 w-3" />
+                    <Button variant="ghost" size="icon" className="size-11" onClick={() => handleCopy(revealedKey)} aria-label="Copy API key">
+                      <Copy className="h-4 w-4" aria-hidden="true" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setRevealedId(null); setRevealedKey(null) }}>
-                      <EyeOff className="h-3 w-3" />
+                    <Button variant="ghost" size="icon" className="size-11" onClick={() => { setRevealedId(null); setRevealedKey(null) }} aria-label="Hide API key">
+                      <EyeOff className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </>
                 ) : (
                   <Button
-                    variant="ghost" size="icon" className="h-8 w-8"
+                    variant="ghost" size="icon" className="size-11"
                     onClick={() => handleReveal(cred.id)}
                     disabled={decrypt.isPending}
+                    aria-label="Reveal API key"
                   >
-                    {decrypt.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}
+                    {decrypt.isPending ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
                   </Button>
                 )}
                 {cred.is_active && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8"
+                  <Button variant="ghost" size="icon" className="size-11"
                     onClick={() => deactivate.mutate({ id: cred.id, api_entry_id: apiId })}
+                    aria-label="Deactivate credential"
                   >
-                    <Shield className="h-3 w-3" />
+                    <Shield className="h-4 w-4" aria-hidden="true" />
                   </Button>
                 )}
                 <Button
                   variant="ghost" size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  className="size-11 text-destructive hover:text-destructive"
                   onClick={() => setDeleteTarget(cred.id)}
+                  aria-label="Delete credential"
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </div>
             </div>
@@ -224,15 +233,15 @@ function SubscriptionInfo({ subscriptions }: { subscriptions: Subscription[] }) 
         return (
           <Card key={sub.id}>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
                   <p className="font-medium">{sub.plan_name}</p>
                   <p className="text-sm text-muted-foreground">
                     {BILLING_MODELS[sub.billing_cycle as keyof typeof BILLING_MODELS] ?? sub.billing_cycle}
                     {sub.cost_per_period > 0 && ` · ${formatCurrency(sub.cost_per_period, sub.currency)}`}
                   </p>
                 </div>
-                {sub.auto_renew && <Badge variant="outline" className="text-xs">Auto-renew</Badge>}
+                {sub.auto_renew && <Badge variant="outline" className="shrink-0 text-xs">Auto-renew</Badge>}
               </div>
               {sub.quota_limit && (
                 <div className="mt-3">
@@ -240,7 +249,14 @@ function SubscriptionInfo({ subscriptions }: { subscriptions: Subscription[] }) 
                     <span>{sub.current_usage.toLocaleString()} / {sub.quota_limit.toLocaleString()} {sub.quota_unit}</span>
                     <span>{quotaPct}%</span>
                   </div>
-                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="mt-1 h-2 overflow-hidden rounded-full bg-muted"
+                    role="progressbar"
+                    aria-valuenow={quotaPct ?? 0}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={`${sub.plan_name} quota usage`}
+                  >
                     <div
                       className={`h-full rounded-full ${(quotaPct ?? 0) >= 95 ? 'bg-destructive' : (quotaPct ?? 0) >= 80 ? 'bg-warning' : 'bg-primary'}`}
                       style={{ width: `${Math.min(quotaPct ?? 0, 100)}%` }}
@@ -302,15 +318,15 @@ function AlertSettingsList({ alerts }: { alerts: AlertSetting[] }) {
       {alerts.map((alert) => {
         const config = ALERT_TYPES[alert.alert_type as keyof typeof ALERT_TYPES]
         return (
-          <div key={alert.id} className="flex items-center justify-between rounded-lg border p-3">
-            <div>
+          <div key={alert.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
+            <div className="min-w-0 flex-1">
               <p className="text-sm font-medium">{config?.label ?? alert.alert_type}</p>
               <p className="text-xs text-muted-foreground">
                 {config?.description}
                 {alert.threshold && ` (threshold: ${alert.threshold})`}
               </p>
             </div>
-            <Badge variant={alert.enabled ? 'default' : 'secondary'}>
+            <Badge variant={alert.enabled ? 'default' : 'secondary'} className="shrink-0">
               {alert.enabled ? 'Enabled' : 'Disabled'}
             </Badge>
           </div>
@@ -331,9 +347,10 @@ export default function ApiDetail() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 p-6">
+      <div className="space-y-6 p-4 sm:p-6" role="status" aria-live="polite">
+        <span className="sr-only">Loading API details...</span>
         <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-4 w-96" />
+        <Skeleton className="h-4 w-full max-w-96" />
         <Skeleton className="h-[400px] w-full" />
       </div>
     )
@@ -341,10 +358,10 @@ export default function ApiDetail() {
 
   if (!api) {
     return (
-      <div className="p-6">
+      <div className="p-4 sm:p-6" role="alert">
         <p className="text-muted-foreground">API not found.</p>
         <Button variant="ghost" asChild className="mt-4">
-          <Link to="/apis"><ArrowLeft className="mr-2 h-4 w-4" />Back to APIs</Link>
+          <Link to="/apis"><ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />Back to APIs</Link>
         </Button>
       </div>
     )
@@ -353,15 +370,15 @@ export default function ApiDetail() {
   const categoryConfig = API_CATEGORIES[api.category]
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-4 sm:p-6">
       <div>
         <Button variant="ghost" size="sm" asChild className="mb-4">
-          <Link to="/apis"><ArrowLeft className="mr-2 h-4 w-4" />Back to APIs</Link>
+          <Link to="/apis"><ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />Back to APIs</Link>
         </Button>
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold">{api.name}</h1>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-bold sm:text-2xl">{api.name}</h1>
               <ApiStatusBadge status={api.status} />
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -388,10 +405,10 @@ export default function ApiDetail() {
             <div className="flex flex-wrap gap-3">
               {api.docs_url && (
                 <a href={api.docs_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline">
-                  <ExternalLink className="h-3 w-3" />Documentation
+                  <ExternalLink className="h-3 w-3" aria-hidden="true" />Documentation
                 </a>
               )}
-              {api.base_url && <code className="rounded bg-muted px-2 py-0.5 text-xs">{api.base_url}</code>}
+              {api.base_url && <code className="break-all rounded bg-muted px-2 py-0.5 text-xs">{api.base_url}</code>}
             </div>
             {api.account_owner && (
               <p className="text-xs text-muted-foreground">
@@ -403,7 +420,7 @@ export default function ApiDetail() {
       )}
 
       <Tabs defaultValue="credentials">
-        <TabsList className="w-full justify-start overflow-x-auto">
+        <TabsList variant="line" className="h-auto w-full flex-nowrap justify-start gap-1 overflow-x-auto">
           <TabsTrigger value="credentials">
             Credentials
             {api.api_credentials && api.api_credentials.length > 0 && (
@@ -434,7 +451,7 @@ export default function ApiDetail() {
           {api.health_check_url ? (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Health check endpoint: <code className="rounded bg-muted px-1">{api.health_check_url}</code> ({api.health_check_method})
+                Health check endpoint: <code className="break-all rounded bg-muted px-1">{api.health_check_url}</code> ({api.health_check_method})
               </p>
               <p className="text-sm text-muted-foreground">Health check history will appear here once the health-check-runner is deployed.</p>
             </div>
@@ -454,7 +471,7 @@ export default function ApiDetail() {
         </Card>
       )}
 
-      <div className="flex gap-4 text-xs text-muted-foreground">
+      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground sm:gap-4">
         <span>Created {formatDateTime(api.created_at)}</span>
         <span>Updated {formatRelativeTime(api.updated_at)}</span>
       </div>

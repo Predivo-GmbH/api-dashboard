@@ -1,8 +1,14 @@
-const ALLOWED_ORIGINS = [
+const PRODUCTION_ORIGINS = [
   'https://apis.predivo.ch',
+]
+
+const DEV_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:3000',
 ]
+
+const isProduction = Deno.env.get('ENVIRONMENT') !== 'development'
+const ALLOWED_ORIGINS = isProduction ? PRODUCTION_ORIGINS : [...PRODUCTION_ORIGINS, ...DEV_ORIGINS]
 
 export function getCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('origin') || ''

@@ -43,7 +43,8 @@ Deno.serve(async (req: Request) => {
     }).select('id, label, key_hint, is_active, created_at').single()
 
     if (error) {
-      return createJsonResponse(req, { error: error.message }, 500)
+      console.error('encrypt-secret DB error:', error.message)
+      return createJsonResponse(req, { error: 'Failed to store credential' }, 500)
     }
 
     await logAudit(admin, user.id, 'credential.created', 'api_credential', data.id, {
@@ -53,6 +54,7 @@ Deno.serve(async (req: Request) => {
 
     return createJsonResponse(req, data, 201)
   } catch (err) {
-    return createJsonResponse(req, { error: (err as Error).message }, 500)
+    console.error('encrypt-secret error:', (err as Error).message)
+    return createJsonResponse(req, { error: 'Internal server error' }, 500)
   }
 })

@@ -52,7 +52,7 @@ export default function AccountSettings() {
           </div>
           <div>
             <p className="text-sm font-medium">User ID</p>
-            <p className="font-mono text-xs text-muted-foreground">{user?.id ?? '-'}</p>
+            <p className="break-all font-mono text-xs text-muted-foreground">{user?.id ?? '-'}</p>
           </div>
         </CardContent>
       </Card>
@@ -74,6 +74,7 @@ export default function AccountSettings() {
                 placeholder="Minimum 8 characters"
                 required
                 minLength={8}
+                className="text-base sm:text-sm"
               />
             </div>
             <div className="space-y-2">
@@ -85,9 +86,10 @@ export default function AccountSettings() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Repeat new password"
                 required
+                className="text-base sm:text-sm"
               />
             </div>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
               {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Updating...</> : 'Update Password'}
             </Button>
           </form>

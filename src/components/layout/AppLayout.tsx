@@ -10,6 +10,14 @@ export function AppLayout() {
 
   return (
     <div className="flex h-svh overflow-hidden">
+      {/* Skip to main content link */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground focus:outline-none"
+      >
+        Skip to main content
+      </a>
+
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
@@ -33,16 +41,17 @@ export function AppLayout() {
       </div>
 
       {/* Main content */}
-      <main className="flex flex-1 flex-col overflow-hidden">
+      <main id="main-content" className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Mobile header */}
         <div className="flex h-14 items-center border-b px-4 md:hidden">
           <Button
             variant="ghost"
             size="icon"
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileOpen}
             onClick={() => setMobileOpen(!mobileOpen)}
           >
-            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {mobileOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
           </Button>
           <div className="ml-2 flex items-center gap-2 font-semibold">
             <div className="flex h-6 w-6 items-center justify-center rounded bg-primary">

@@ -32,7 +32,7 @@ export function AppSidebar({ className, onNavigate }: AppSidebarProps) {
   return (
     <aside
       className={cn(
-        'flex h-full w-60 flex-col border-r bg-sidebar text-sidebar-foreground',
+        'flex h-full w-60 max-w-[80vw] flex-col border-r bg-sidebar text-sidebar-foreground',
         className
       )}
     >
@@ -53,14 +53,14 @@ export function AppSidebar({ className, onNavigate }: AppSidebarProps) {
             onClick={onNavigate}
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                'flex min-h-[44px] items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                 isActive
                   ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                   : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
               )
             }
           >
-            <Icon className="h-4 w-4" />
+            <Icon className="h-4 w-4" aria-hidden="true" />
             {label}
           </NavLink>
         ))}
@@ -71,7 +71,7 @@ export function AppSidebar({ className, onNavigate }: AppSidebarProps) {
       <div className="flex items-center justify-between p-2">
         <ThemeToggle />
         <Button variant="ghost" size="icon" onClick={signOut} aria-label="Sign out">
-          <LogOut className="h-4 w-4" />
+          <LogOut className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>
     </aside>

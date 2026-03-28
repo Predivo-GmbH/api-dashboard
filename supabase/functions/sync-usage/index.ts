@@ -296,15 +296,16 @@ Deno.serve(async (req: Request) => {
         .maybeSingle()
 
       if (existing) {
-        await admin.from('usage_records').update({
+        const { error: updateErr } = await admin.from('usage_records').update({
           call_count: callCount,
           credits_used: creditsUsed,
           cost,
           metadata: result.data,
           recorded_at: now.toISOString(),
         }).eq('id', existing.id)
+        if (updateErr) console.error(`Failed to update usage_records ${existing.id}:`, updateErr.message)
       } else {
-        await admin.from('usage_records').insert({
+        const { error: insertErr } = await admin.from('usage_records').insert({
           api_entry_id: apiEntry.id,
           period_start: periodStart,
           period_end: periodEnd,
@@ -314,6 +315,7 @@ Deno.serve(async (req: Request) => {
           source: 'api_import',
           metadata: result.data,
         })
+        if (insertErr) console.error(`Failed to insert usage_records for ${apiName}:`, insertErr.message)
       }
 
       // Update subscription with live data
@@ -323,9 +325,10 @@ Deno.serve(async (req: Request) => {
       if (quotaLimit !== null) subUpdate.quota_limit = quotaLimit
 
       if (Object.keys(subUpdate).length > 0) {
-        await admin.from('subscriptions')
+        const { error: subErr } = await admin.from('subscriptions')
           .update(subUpdate)
           .eq('api_entry_id', apiEntry.id)
+        if (subErr) console.error(`Failed to update subscription for ${apiName}:`, subErr.message)
       }
     }
 
@@ -340,6 +343,7 @@ Deno.serve(async (req: Request) => {
       results,
     }, 200)
   } catch (err) {
-    return createJsonResponse(req, { error: (err as Error).message }, 500)
+    console.error('sync-usage error:', (err as Error).message)
+    return createJsonResponse(req, { error: 'Internal server error' }, 500)
   }
 })

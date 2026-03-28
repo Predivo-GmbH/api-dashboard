@@ -6,6 +6,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
 import { PasswordGate } from '@/components/shared/PasswordGate'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { RouteAnnouncer } from '@/components/shared/RouteAnnouncer'
 import { useAuth } from '@/hooks/useAuth'
 import { Loader2 } from 'lucide-react'
 
@@ -35,8 +36,9 @@ const queryClient = new QueryClient({
 
 function Loading() {
   return (
-    <div className="flex min-h-svh items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    <div className="flex min-h-svh items-center justify-center" role="status" aria-live="polite">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-hidden="true" />
+      <span className="sr-only">Loading...</span>
     </div>
   )
 }
@@ -85,6 +87,7 @@ function AppRoutes() {
 
   return (
     <PasswordGate>
+      <RouteAnnouncer />
       <Routes>
         <Route
           path="/"

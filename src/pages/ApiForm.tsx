@@ -100,8 +100,9 @@ export default function ApiForm() {
   // so useState initializers pick up the existing data without useEffect.
   if (isEditing && loadingExisting) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center p-12" role="status" aria-live="polite">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-hidden="true" />
+        <span className="sr-only">Loading form data...</span>
       </div>
     )
   }
@@ -173,10 +174,10 @@ function ApiFormBody({
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 p-6">
+    <div className="mx-auto max-w-2xl space-y-6 p-4 sm:p-6">
       <Button variant="ghost" size="sm" asChild>
         <Link to={isEditing ? `/apis/${id}` : '/apis'}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
+          <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
           Back
         </Link>
       </Button>
@@ -227,7 +228,7 @@ function ApiFormBody({
               <div className="space-y-2">
                 <Label>API Type</Label>
                 <Select value={form.apiType} onValueChange={(v) => setField('apiType', v)}>
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="API Type">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -242,7 +243,7 @@ function ApiFormBody({
               <div className="space-y-2">
                 <Label>Category</Label>
                 <Select value={form.category} onValueChange={(v) => setField('category', v as ApiCategory)}>
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="Category">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -257,7 +258,7 @@ function ApiFormBody({
               <div className="space-y-2">
                 <Label>Status</Label>
                 <Select value={form.status} onValueChange={(v) => setField('status', v as ApiStatus)}>
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="Status">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -313,7 +314,7 @@ function ApiFormBody({
               <div className="space-y-2">
                 <Label>Method</Label>
                 <Select value={form.healthCheckMethod} onValueChange={(v) => setField('healthCheckMethod', v as 'GET' | 'HEAD' | 'POST')}>
-                  <SelectTrigger className="w-[100px]">
+                  <SelectTrigger className="w-full sm:w-[100px]" aria-label="Health check method">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -358,7 +359,7 @@ function ApiFormBody({
             <div className="space-y-2">
               <Label>Billing Model</Label>
               <Select value={form.billingModel} onValueChange={(v) => setField('billingModel', v as BillingModel)}>
-                <SelectTrigger>
+                <SelectTrigger aria-label="Billing Model">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -382,16 +383,17 @@ function ApiFormBody({
               value={form.notes}
               onChange={(e) => setField('notes', e.target.value)}
               placeholder="Any additional notes..."
+              aria-label="Notes"
               rows={3}
             />
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-3">
-          <Button type="button" variant="outline" asChild>
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" className="w-full sm:w-auto" asChild>
             <Link to={isEditing ? `/apis/${id}` : '/apis'}>Cancel</Link>
           </Button>
-          <Button type="submit" disabled={isPending}>
+          <Button type="submit" className="w-full sm:w-auto" disabled={isPending}>
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

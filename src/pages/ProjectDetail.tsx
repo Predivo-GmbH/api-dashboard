@@ -36,7 +36,8 @@ export default function ProjectDetail() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6 p-6">
+      <div className="space-y-6 p-4 sm:p-6" role="status" aria-live="polite">
+        <span className="sr-only">Loading project details...</span>
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-[300px] w-full" />
       </div>
@@ -45,15 +46,16 @@ export default function ProjectDetail() {
 
   if (!project) {
     return (
-      <div className="p-6">
+      <div className="p-4 sm:p-6" role="alert">
         <p className="text-muted-foreground">Project not found.</p>
         <Button variant="ghost" asChild className="mt-4">
-          <Link to="/projects"><ArrowLeft className="mr-2 h-4 w-4" />Back to Projects</Link>
+          <Link to="/projects"><ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />Back to Projects</Link>
         </Button>
       </div>
     )
   }
 
+  const projectId = project.id
   const assignedApiIds = new Set(project.assignments.map((a: { api_entry_id: string }) => a.api_entry_id))
   const availableApis = (allApis ?? []).filter((a) => !assignedApiIds.has(a.id))
 
@@ -61,7 +63,7 @@ export default function ProjectDetail() {
     if (!selectedApiId) return
     await assignApi.mutateAsync({
       api_entry_id: selectedApiId,
-      project_id: project!.id,
+      project_id: projectId,
       env_var_name: envVarName || null,
       notes: null,
     })
@@ -71,13 +73,13 @@ export default function ProjectDetail() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-4 sm:p-6">
       <Button variant="ghost" size="sm" asChild>
-        <Link to="/projects"><ArrowLeft className="mr-2 h-4 w-4" />Back to Projects</Link>
+        <Link to="/projects"><ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />Back to Projects</Link>
       </Button>
 
       <div className="flex items-center gap-3">
-        <div className="h-5 w-5 shrink-0 rounded-full" style={{ backgroundColor: project.color ?? 'var(--color-muted-foreground)' }} />
+        <div className="h-5 w-5 shrink-0 rounded-full" style={{ backgroundColor: project.color ?? 'var(--color-muted-foreground)' }} aria-hidden="true" />
         <h1 className="text-2xl font-bold">{project.name}</h1>
         <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>{project.status}</Badge>
       </div>
@@ -102,13 +104,13 @@ export default function ProjectDetail() {
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-muted-foreground">Created</p>
-            <p className="text-2xl font-bold">{formatDate(project.created_at)}</p>
+            <p className="text-xl font-bold sm:text-2xl">{formatDate(project.created_at)}</p>
           </CardContent>
         </Card>
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-base">Assigned APIs</CardTitle>
           <Button size="sm" onClick={() => setAssignOpen(true)} disabled={availableApis.length === 0}>
             <Plus className="mr-1 h-3 w-3" />Assign API
@@ -131,10 +133,10 @@ export default function ProjectDetail() {
               {project.assignments.map((a: ProjectAssignmentWithApi) => {
                 const api = a.api_entries?.[0]
                 return (
-                  <div key={a.id} className="flex items-center justify-between rounded-lg border p-3">
+                  <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
                     <Link to={`/apis/${a.api_entry_id}`} className="min-w-0 hover:underline">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">{api?.name ?? a.api_entry_id}</p>
+                        <p className="truncate text-sm font-medium">{api?.name ?? a.api_entry_id}</p>
                         {api?.status ? <ApiStatusBadge status={api.status} /> : null}
                       </div>
                       <div className="flex gap-2 text-xs text-muted-foreground">
@@ -149,14 +151,15 @@ export default function ProjectDetail() {
                     </Link>
                     <Button
                       variant="ghost" size="icon"
-                      className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
+                      className="size-11 shrink-0 text-destructive hover:text-destructive"
                       onClick={() => setRemoveTarget({
                         id: a.id,
                         api_entry_id: a.api_entry_id,
                         name: api?.name ?? 'this API',
                       })}
+                      aria-label={`Remove ${api?.name ?? 'API'} from project`}
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-3 w-3" aria-hidden="true" />
                     </Button>
                   </div>
                 )
@@ -169,13 +172,13 @@ export default function ProjectDetail() {
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Assign API to {project.name}</DialogTitle>
+            <DialogTitle className="truncate">Assign API to {project.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>API</Label>
               <Select value={selectedApiId} onValueChange={setSelectedApiId}>
-                <SelectTrigger><SelectValue placeholder="Select an API" /></SelectTrigger>
+                <SelectTrigger aria-label="Select an API"><SelectValue placeholder="Select an API" /></SelectTrigger>
                 <SelectContent>
                   {availableApis.map((api) => (
                     <SelectItem key={api.id} value={api.id}>{api.name} ({api.provider})</SelectItem>
@@ -207,7 +210,7 @@ export default function ProjectDetail() {
         loading={unassignApi.isPending}
         onConfirm={() => {
           if (removeTarget) {
-            unassignApi.mutate({ id: removeTarget.id, project_id: project!.id, api_entry_id: removeTarget.api_entry_id })
+            unassignApi.mutate({ id: removeTarget.id, project_id: projectId, api_entry_id: removeTarget.api_entry_id })
             setRemoveTarget(null)
           }
         }}

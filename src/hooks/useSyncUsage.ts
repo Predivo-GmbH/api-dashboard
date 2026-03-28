@@ -30,6 +30,9 @@ export function useSyncUsage() {
       })
 
       if (error) throw error
+      if (!data || typeof data !== 'object' || !('synced_at' in data) || !('results' in data)) {
+        throw new Error('Unexpected sync-usage response shape')
+      }
       return data as SyncResponse
     },
     onSuccess: (data) => {

@@ -50,6 +50,7 @@ export default function Auth() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoFocus
+                className="text-base sm:text-sm"
               />
             </div>
             <div className="space-y-2">
@@ -60,17 +61,18 @@ export default function Auth() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="text-base sm:text-sm"
               />
             </div>
             {error && (
-              <p className="text-sm text-destructive">{error}</p>
+              <p className="text-sm text-destructive" role="alert">{error}</p>
             )}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign in'}
             </Button>
           </form>
           <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-            <Shield className="h-3 w-3" />
+            <Shield className="h-3 w-3" aria-hidden="true" />
             Protected by AES-256 encryption
           </p>
         </CardContent>

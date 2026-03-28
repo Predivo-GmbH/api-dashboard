@@ -37,6 +37,8 @@ export function useApiDetail(id: string | undefined) {
   return useQuery({
     queryKey: ['api', id],
     queryFn: async (): Promise<ApiEntry> => {
+      if (!id) throw new Error('API id is required')
+
       const { data, error } = await supabase
         .from('api_entries')
         .select(`
@@ -51,7 +53,7 @@ export function useApiDetail(id: string | undefined) {
           subscriptions (*),
           alert_settings (*)
         `)
-        .eq('id', id!)
+        .eq('id', id)
         .single()
 
       if (error) throw error

@@ -32,12 +32,12 @@ export default function NotificationSettings() {
           <div className="space-y-4">
             <h3 className="text-sm font-medium">Alert Types</h3>
             {Object.entries(ALERT_TYPES).map(([key, config]) => (
-              <div key={key} className="flex items-center justify-between">
-                <Label htmlFor={`alert-${key}`} className="cursor-pointer">
+              <div key={key} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4 min-h-[44px]">
+                <Label htmlFor={`alert-${key}`} className="min-w-0 cursor-pointer">
                   <p className="text-sm font-medium">{config.label}</p>
                   <p className="text-xs font-normal text-muted-foreground">{config.description}</p>
                 </Label>
-                <Switch id={`alert-${key}`} defaultChecked disabled />
+                <Switch id={`alert-${key}`} defaultChecked disabled className="shrink-0" />
               </div>
             ))}
           </div>

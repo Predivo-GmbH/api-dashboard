@@ -22,10 +22,12 @@ export function useProjectDetail(id: string | undefined) {
   return useQuery({
     queryKey: ['project', id],
     queryFn: async () => {
+      if (!id) throw new Error('Project id is required')
+
       const { data: project, error: pErr } = await supabase
         .from('projects')
         .select('*')
-        .eq('id', id!)
+        .eq('id', id)
         .single()
 
       if (pErr) throw pErr
@@ -36,15 +38,15 @@ export function useProjectDetail(id: string | undefined) {
           id, api_entry_id, env_var_name, notes, created_at,
           api_entries:api_entry_id (id, name, provider, status, category)
         `)
-        .eq('project_id', id!)
+        .eq('project_id', id)
 
       if (aErr) throw aErr
 
       // Get cost summary for this project
       const { data: usage, error: uErr } = await supabase
         .from('usage_records')
-        .select('cost, currency')
-        .eq('project_id', id!)
+        .select('cost')
+        .eq('project_id', id)
 
       if (uErr) throw uErr
 

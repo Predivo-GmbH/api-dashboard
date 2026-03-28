@@ -40,17 +40,17 @@ export default function AuditLog() {
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 p-4 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <ScrollText className="h-6 w-6" />
+          <ScrollText className="h-6 w-6" aria-hidden="true" />
           <h1 className="text-2xl font-bold">Audit Log</h1>
           {totalCount > 0 && (
             <Badge variant="secondary" className="text-xs">{totalCount}</Badge>
           )}
         </div>
         <Select value={actionFilter || 'all'} onValueChange={(v) => { setActionFilter(v === 'all' ? '' : v); setPage(1) }}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="min-h-[44px] w-full sm:min-h-0 sm:w-[180px]" aria-label="Filter by action type">
             <SelectValue placeholder="All actions" />
           </SelectTrigger>
           <SelectContent>
@@ -63,7 +63,8 @@ export default function AuditLog() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-2">
+        <div className="space-y-2" role="status" aria-live="polite">
+          <span className="sr-only">Loading audit log...</span>
           {Array.from({ length: 10 }).map((_, i) => (
             <Skeleton key={i} className="h-12 w-full" />
           ))}
@@ -76,15 +77,46 @@ export default function AuditLog() {
         />
       ) : (
         <>
-          <div className="overflow-x-auto rounded-md border">
+          {/* Mobile card layout */}
+          <div className="sm:hidden space-y-3">
+            {entries.map((entry) => {
+              const actionConfig = ACTION_LABELS[entry.action]
+              return (
+                <div key={entry.id} className="rounded-md border p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Badge variant="secondary" className={`text-xs ${actionConfig?.color ?? ''}`}>
+                      {actionConfig?.label ?? entry.action}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDateTime(entry.created_at)}
+                    </span>
+                  </div>
+                  {entry.target_entity && (
+                    <div className="text-sm text-muted-foreground">{entry.target_entity}</div>
+                  )}
+                  {entry.metadata && (
+                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap break-all">
+                      {JSON.stringify(entry.metadata, null, 2)}
+                    </pre>
+                  )}
+                  <div className="text-xs text-muted-foreground">
+                    IP: {entry.ip_address ?? '-'}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Desktop table layout */}
+          <div className="hidden sm:block overflow-x-auto rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Target</TableHead>
-                  <TableHead>Details</TableHead>
-                  <TableHead>IP</TableHead>
-                  <TableHead>Time</TableHead>
+                  <TableHead className="whitespace-nowrap">Action</TableHead>
+                  <TableHead className="whitespace-nowrap">Target</TableHead>
+                  <TableHead className="whitespace-nowrap">Details</TableHead>
+                  <TableHead className="whitespace-nowrap">IP</TableHead>
+                  <TableHead className="whitespace-nowrap">Time</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -92,12 +124,12 @@ export default function AuditLog() {
                   const actionConfig = ACTION_LABELS[entry.action]
                   return (
                     <TableRow key={entry.id}>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <Badge variant="secondary" className={`text-xs ${actionConfig?.color ?? ''}`}>
                           {actionConfig?.label ?? entry.action}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm">
+                      <TableCell className="whitespace-nowrap text-sm">
                         {entry.target_entity && (
                           <span className="text-muted-foreground">
                             {entry.target_entity}
@@ -107,10 +139,10 @@ export default function AuditLog() {
                       <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
                         {entry.metadata ? JSON.stringify(entry.metadata) : '-'}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
+                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                         {entry.ip_address ?? '-'}
                       </TableCell>
-                      <TableCell className="text-xs">
+                      <TableCell className="whitespace-nowrap text-xs">
                         {formatDateTime(entry.created_at)}
                       </TableCell>
                     </TableRow>
@@ -122,15 +154,15 @@ export default function AuditLog() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Page {page} of {totalPages} ({totalCount} entries)
               </p>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setPage(p => p - 1)} disabled={page <= 1} aria-label="Previous page">
+                <Button variant="outline" size="icon" className="size-11" onClick={() => setPage(p => p - 1)} disabled={page <= 1} aria-label="Previous page">
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages} aria-label="Next page">
+                <Button variant="outline" size="icon" className="size-11" onClick={() => setPage(p => p + 1)} disabled={page >= totalPages} aria-label="Next page">
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>

@@ -91,10 +91,21 @@ export function useDashboardStats() {
   })
 }
 
+interface RecentAlert {
+  id: string
+  alert_setting_id: string
+  api_entry_id: string
+  message: string
+  recipients: string[]
+  sent_at: string
+  acknowledged_at: string | null
+  api_entries?: { name?: string; provider?: string }
+}
+
 export function useRecentAlerts() {
   return useQuery({
     queryKey: ['recent-alerts'],
-    queryFn: async () => {
+    queryFn: async (): Promise<RecentAlert[]> => {
       const { data, error } = await supabase
         .from('triggered_alerts')
         .select(`
@@ -106,23 +117,8 @@ export function useRecentAlerts() {
         .limit(10)
 
       if (error) throw error
-      return data ?? []
+      return (data ?? []) as RecentAlert[]
     },
   })
 }
 
-export function useMonthlyCosts() {
-  return useQuery({
-    queryKey: ['monthly-costs'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('v_monthly_cost_by_project')
-        .select('*')
-        .order('month', { ascending: false })
-        .limit(60)
-
-      if (error) throw error
-      return data ?? []
-    },
-  })
-}

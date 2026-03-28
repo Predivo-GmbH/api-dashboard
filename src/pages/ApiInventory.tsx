@@ -46,10 +46,10 @@ export default function ApiInventory() {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 p-4 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Key className="h-6 w-6" />
+          <Key className="h-6 w-6" aria-hidden="true" />
           <h1 className="text-2xl font-bold">APIs</h1>
           {apis && (
             <Badge variant="secondary" className="text-xs">
@@ -66,44 +66,47 @@ export default function ApiInventory() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <div className="relative sm:flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
           <Input
             placeholder="Search APIs..."
+            aria-label="Search APIs"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-9 text-base sm:text-sm"
           />
         </div>
-        <Select value={statusFilter || 'all'} onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            {Object.entries(API_STATUSES).map(([key, config]) => (
-              <SelectItem key={key} value={key}>
-                {config.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={categoryFilter || 'all'} onValueChange={(v) => setCategoryFilter(v === 'all' ? '' : v)}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All categories</SelectItem>
-            {Object.entries(API_CATEGORIES).map(([key, config]) => (
-              <SelectItem key={key} value={key}>
-                {config.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Select value={statusFilter || 'all'} onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}>
+            <SelectTrigger className="w-full sm:w-[150px]" aria-label="Filter by status">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              {Object.entries(API_STATUSES).map(([key, config]) => (
+                <SelectItem key={key} value={key}>
+                  {config.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={categoryFilter || 'all'} onValueChange={(v) => setCategoryFilter(v === 'all' ? '' : v)}>
+            <SelectTrigger className="w-full sm:w-[150px]" aria-label="Filter by category">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All categories</SelectItem>
+              {Object.entries(API_CATEGORIES).map(([key, config]) => (
+                <SelectItem key={key} value={key}>
+                  {config.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         {hasFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters}>
+          <Button variant="outline" size="sm" onClick={clearFilters}>
             <X className="mr-1 h-3 w-3" />
             Clear
           </Button>
@@ -112,7 +115,8 @@ export default function ApiInventory() {
 
       {/* Table */}
       {isLoading ? (
-        <div className="space-y-2">
+        <div className="space-y-2" role="status" aria-live="polite">
+          <span className="sr-only">Loading API list...</span>
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-14 w-full" />
           ))}
@@ -142,18 +146,76 @@ export default function ApiInventory() {
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-md border">
+        <>
+        {/* Mobile card layout */}
+        <div className="sm:hidden space-y-3">
+          {apis.map((api) => (
+            <Link
+              key={api.id}
+              to={`/apis/${api.id}`}
+              className="block rounded-md border p-4 space-y-2 hover:bg-muted/50 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-medium">{api.name}</span>
+                <Badge variant="outline" className="text-xs">
+                  {API_CATEGORIES[api.category]?.label ?? api.category}
+                </Badge>
+              </div>
+              {api.provider && (
+                <p className="text-xs text-muted-foreground">{api.provider}</p>
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                <ApiStatusBadge status={api.status} />
+                <HealthStatusBadge status={api.health_status} />
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Cost</span>
+                <span>{api.cost_per_period ? formatCurrency(api.cost_per_period) : '-'}</span>
+              </div>
+              {api.quota_limit && (
+                <div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Quota</span>
+                    <span>{api.quota_usage_pct ?? 0}%</span>
+                  </div>
+                  <div
+                    className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted"
+                    role="progressbar"
+                    aria-valuenow={api.quota_usage_pct ?? 0}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={`${api.name} quota usage`}
+                  >
+                    <div
+                      className={`h-full rounded-full ${
+                        (api.quota_usage_pct ?? 0) >= 95
+                          ? 'bg-destructive'
+                          : (api.quota_usage_pct ?? 0) >= 80
+                            ? 'bg-warning'
+                            : 'bg-primary'
+                      }`}
+                      style={{ width: `${Math.min(api.quota_usage_pct ?? 0, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </Link>
+          ))}
+        </div>
+
+        {/* Desktop table layout */}
+        <div className="hidden sm:block overflow-x-auto rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Health</TableHead>
-                <TableHead>Plan</TableHead>
-                <TableHead className="text-right">Cost</TableHead>
-                <TableHead>Quota</TableHead>
-                <TableHead>Renewal</TableHead>
+                <TableHead className="whitespace-nowrap">Category</TableHead>
+                <TableHead className="whitespace-nowrap">Status</TableHead>
+                <TableHead className="whitespace-nowrap">Health</TableHead>
+                <TableHead className="whitespace-nowrap">Plan</TableHead>
+                <TableHead className="whitespace-nowrap text-right">Cost</TableHead>
+                <TableHead className="whitespace-nowrap">Quota</TableHead>
+                <TableHead className="whitespace-nowrap">Renewal</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -161,7 +223,7 @@ export default function ApiInventory() {
                 const renewDays = api.renewal_date ? daysUntil(api.renewal_date) : null
                 return (
                   <TableRow key={api.id}>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <Link
                         to={`/apis/${api.id}`}
                         className="font-medium hover:underline"
@@ -170,32 +232,39 @@ export default function ApiInventory() {
                       </Link>
                       <p className="text-xs text-muted-foreground">{api.provider}</p>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <Badge variant="outline" className="text-xs">
                         {API_CATEGORIES[api.category]?.label ?? api.category}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <ApiStatusBadge status={api.status} />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <HealthStatusBadge status={api.health_status} />
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="whitespace-nowrap text-sm">
                       {api.plan_name ?? '-'}
                     </TableCell>
-                    <TableCell className="text-right text-sm">
+                    <TableCell className="whitespace-nowrap text-right text-sm">
                       {api.cost_per_period
                         ? formatCurrency(api.cost_per_period)
                         : '-'}
                     </TableCell>
                     <TableCell>
                       {api.quota_limit ? (
-                        <div className="w-24">
+                        <div className="w-full max-w-24">
                           <div className="flex justify-between text-xs">
                             <span>{api.quota_usage_pct ?? 0}%</span>
                           </div>
-                          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+                          <div
+                            className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted"
+                            role="progressbar"
+                            aria-valuenow={api.quota_usage_pct ?? 0}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-label={`${api.name} quota usage`}
+                          >
                             <div
                               className={`h-full rounded-full ${
                                 (api.quota_usage_pct ?? 0) >= 95
@@ -212,7 +281,7 @@ export default function ApiInventory() {
                         <span className="text-sm text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="whitespace-nowrap text-sm">
                       {api.renewal_date ? (
                         <span className={renewDays !== null && renewDays <= 7 ? 'font-medium text-destructive' : ''}>
                           {formatDate(api.renewal_date)}
@@ -227,6 +296,7 @@ export default function ApiInventory() {
             </TableBody>
           </Table>
         </div>
+        </>
       )}
     </div>
   )

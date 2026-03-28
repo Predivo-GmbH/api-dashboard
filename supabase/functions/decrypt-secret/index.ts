@@ -49,6 +49,7 @@ Deno.serve(async (req: Request) => {
 
     return createJsonResponse(req, { plaintext_key: plaintext })
   } catch (err) {
-    return createJsonResponse(req, { error: (err as Error).message }, 500)
+    console.error('decrypt-secret error:', (err as Error).message)
+    return createJsonResponse(req, { error: 'Internal server error' }, 500)
   }
 })

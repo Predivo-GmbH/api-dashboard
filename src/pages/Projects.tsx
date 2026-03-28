@@ -14,13 +14,19 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { useProjectList, useCreateProject } from '@/hooks/useProjects'
 import { formatDate } from '@/lib/formatters'
 
+/** Read the --primary CSS custom property so the default project color stays in sync with the design token. */
+function getPrimaryColor(): string {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim()
+  return raw.startsWith('#') ? raw : '#0D9488'
+}
+
 export default function Projects() {
   const { data: projects, isLoading } = useProjectList()
   const createProject = useCreateProject()
   const [addOpen, setAddOpen] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [color, setColor] = useState('#0D9488')
+  const [color, setColor] = useState(getPrimaryColor)
 
   async function handleCreate() {
     if (!name.trim()) return
@@ -32,27 +38,28 @@ export default function Projects() {
     setAddOpen(false)
     setName('')
     setDescription('')
-    setColor('#0D9488')
+    setColor(getPrimaryColor())
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 p-4 sm:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <FolderKanban className="h-6 w-6" />
+          <FolderKanban className="h-6 w-6" aria-hidden="true" />
           <h1 className="text-2xl font-bold">Projects</h1>
           {projects && (
             <Badge variant="secondary" className="text-xs">{projects.length}</Badge>
           )}
         </div>
-        <Button onClick={() => setAddOpen(true)}>
+        <Button onClick={() => setAddOpen(true)} className="min-h-[44px] sm:min-h-0">
           <Plus className="mr-2 h-4 w-4" />
           Add Project
         </Button>
       </div>
 
       {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" role="status" aria-live="polite">
+          <span className="sr-only">Loading projects...</span>
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-28" />
           ))}
@@ -117,8 +124,8 @@ export default function Projects() {
             <div className="space-y-2">
               <Label htmlFor="proj-color">Color</Label>
               <div className="flex items-center gap-2">
-                <input type="color" id="proj-color" value={color} onChange={(e) => setColor(e.target.value)} className="h-9 w-9 cursor-pointer rounded border" />
-                <Input value={color} onChange={(e) => setColor(e.target.value)} className="flex-1" />
+                <input type="color" id="proj-color" value={color} onChange={(e) => setColor(e.target.value)} className="h-11 w-11 cursor-pointer rounded border" />
+                <Input value={color} onChange={(e) => setColor(e.target.value)} className="flex-1" aria-label="Color hex value" />
               </div>
             </div>
           </div>

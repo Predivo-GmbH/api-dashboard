@@ -42,7 +42,7 @@ export function PasswordGate({ children }: { children: ReactNode }) {
       <Card className="w-full max-w-sm rounded-xl">
         <CardHeader className="text-center">
           <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-            <Lock className="h-5 w-5 text-primary-foreground" />
+            <Lock className="h-5 w-5 text-primary-foreground" aria-hidden="true" />
           </div>
           <CardTitle>Predivo APIs</CardTitle>
           <CardDescription>Enter password to continue</CardDescription>
@@ -52,15 +52,17 @@ export function PasswordGate({ children }: { children: ReactNode }) {
             <Input
               type="password"
               placeholder="Password"
+              aria-label="Password"
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value)
                 setError(false)
               }}
               autoFocus
+              className="text-base sm:text-sm"
             />
             {error && (
-              <p className="text-sm text-destructive">Incorrect password</p>
+              <p className="text-sm text-destructive" role="alert">Incorrect password</p>
             )}
             <Button type="submit" className="w-full">
               Unlock
