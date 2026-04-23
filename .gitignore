@@ -30,3 +30,12 @@ dist-ssr
 
 # Supabase temp files
 supabase/.temp/
+
+# Credentials
+docs/Credentials.txt
+
+# Test artifacts
+coverage/
+playwright-report/
+test-results/
+blob-report/
