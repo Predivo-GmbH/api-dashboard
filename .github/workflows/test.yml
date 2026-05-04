@@ -48,6 +48,12 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
+      - name: Critical Path E2E (MUST PASS)
+        run: npx playwright test e2e/critical-path.spec.ts
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
       - name: Run E2E tests
         run: npx playwright test
         env:
