@@ -34,6 +34,15 @@ jobs:
           sudo apt-get install -y lftp
           FTP_CONN="set ftp:ssl-allow no; set ftp:passive-mode yes; set net:max-retries 3; set net:reconnect-interval-base 5; open -u ${{ secrets.FTP_USER }},${{ secrets.FTP_PASS }} ${{ secrets.FTP_HOST }};"
 
+          echo "apis" > ./dist/.site-id
+
+          REMOTE_ID=$(lftp -e "${FTP_CONN} cat /apis.predivo.ch/.site-id; quit" 2>/dev/null || echo "")
+          if [ -n "$REMOTE_ID" ] && [ "$REMOTE_ID" != "apis" ]; then
+            echo "::error::DEPLOY ABORTED — remote .site-id is '$REMOTE_ID', expected 'apis'. Wrong FTP target!"
+            exit 1
+          fi
+          echo "Site-id guard passed (remote='${REMOTE_ID:-<none>}')"
+
           # Step 1: Upload new hashed assets alongside old ones (no deletion yet)
           lftp -e "
             $FTP_CONN
@@ -44,6 +53,7 @@ jobs:
           # Step 2: Upload index.html + root files (switches to new asset references)
           lftp -e "
             $FTP_CONN
+            put ./dist/.site-id -o /apis.predivo.ch/.site-id;
             put ./dist/index.html -o /apis.predivo.ch/index.html;
             put ./dist/.htaccess -o /apis.predivo.ch/.htaccess;
             put ./dist/favicon.svg -o /apis.predivo.ch/favicon.svg;
