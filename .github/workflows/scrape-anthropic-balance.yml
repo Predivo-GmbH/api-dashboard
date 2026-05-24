@@ -31,6 +31,7 @@ jobs:
 
       - name: Scrape Anthropic balance
         id: scrape
+        continue-on-error: true
         env:
           ANTHROPIC_SESSION_KEY: ${{ secrets.ANTHROPIC_SESSION_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
