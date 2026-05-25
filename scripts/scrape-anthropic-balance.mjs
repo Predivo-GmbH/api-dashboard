@@ -5,6 +5,8 @@
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
 const ANTHROPIC_SESSION_KEY = process.env.ANTHROPIC_SESSION_KEY
+const BACKOFFICE_SUPABASE_URL = process.env.BACKOFFICE_SUPABASE_URL
+const BACKOFFICE_SERVICE_KEY = process.env.BACKOFFICE_SERVICE_KEY
 const ORG_UUID = '49a44d35-9078-4532-8178-b2c9d55550fa' // Predivo GmbH
 
 async function getBalanceViaPlaywright() {
@@ -118,9 +120,9 @@ async function updateSupabase(balance) {
     throw new Error(`Failed to update credit_snapshots: ${err}`)
   }
 
-  // Also update api_subscriptions.credits_remaining directly
+  // Also update subscriptions.credits_remaining directly
   const subRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/api_subscriptions?api_entry_id=eq.${apiEntryId}`,
+    `${SUPABASE_URL}/rest/v1/subscriptions?api_entry_id=eq.${apiEntryId}`,
     {
       method: 'PATCH',
       headers: {
@@ -140,7 +142,49 @@ async function updateSupabase(balance) {
     throw new Error(`Failed to update subscription: ${err}`)
   }
 
-  console.log(`Supabase updated: credit_snapshots.balance = $${balance.toFixed(2)}, subscriptions.credits_remaining = $${balance.toFixed(2)}`)
+  console.log(`APIs Supabase updated: credit_snapshots.balance = $${balance.toFixed(2)}, subscriptions.credits_remaining = $${balance.toFixed(2)}`)
+
+  // Update BackOffice dashboard (api_subscriptions.balance_override)
+  if (BACKOFFICE_SUPABASE_URL && BACKOFFICE_SERVICE_KEY) {
+    const boApiRes = await fetch(
+      `${BACKOFFICE_SUPABASE_URL}/rest/v1/api_entries?name=eq.Anthropic%20Claude&select=id`,
+      {
+        headers: {
+          'apikey': BACKOFFICE_SERVICE_KEY,
+          'Authorization': `Bearer ${BACKOFFICE_SERVICE_KEY}`,
+        },
+      }
+    )
+    const boApis = await boApiRes.json()
+    if (boApis.length) {
+      const boRes = await fetch(
+        `${BACKOFFICE_SUPABASE_URL}/rest/v1/api_subscriptions?api_entry_id=eq.${boApis[0].id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': BACKOFFICE_SERVICE_KEY,
+            'Authorization': `Bearer ${BACKOFFICE_SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify({
+            balance_override: balance,
+            balance_override_updated_at: new Date().toISOString(),
+          }),
+        }
+      )
+      if (boRes.ok) {
+        console.log(`BackOffice updated: api_subscriptions.balance_override = $${balance.toFixed(2)}`)
+      } else {
+        const boErr = await boRes.text()
+        console.error(`Warning: Failed to update BackOffice: ${boErr}`)
+      }
+    } else {
+      console.warn('Warning: Anthropic Claude not found in BackOffice api_entries')
+    }
+  } else {
+    console.log('Skipping BackOffice update (BACKOFFICE_SUPABASE_URL not set)')
+  }
 }
 
 async function main() {
