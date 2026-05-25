@@ -118,9 +118,9 @@ async function updateSupabase(balance) {
     throw new Error(`Failed to update credit_snapshots: ${err}`)
   }
 
-  // Also update subscriptions.credits_remaining directly
+  // Also update api_subscriptions.credits_remaining directly
   const subRes = await fetch(
-    `${SUPABASE_URL}/rest/v1/subscriptions?api_entry_id=eq.${apiEntryId}`,
+    `${SUPABASE_URL}/rest/v1/api_subscriptions?api_entry_id=eq.${apiEntryId}`,
     {
       method: 'PATCH',
       headers: {
