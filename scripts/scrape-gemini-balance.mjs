@@ -308,10 +308,11 @@ async function fetchViaAiStudioApi() {
     let interceptedBalance = null
     page.on('response', async (response) => {
       const url = response.url()
-      if (url.includes('clients6.google.com') || url.includes('alkali') || url.includes('billing') || url.includes('payment')) {
+      // Only intercept actual API responses, never login/redirect pages
+      if (url.includes('accounts.google.com')) return
+      if (url.includes('clients6.google.com') || url.includes('alkali')) {
         try {
           const text = await response.text()
-          // Look for numeric values that could be balances
           const amounts = text.match(/\d+\.\d{2}/g)
           if (amounts) {
             for (const amt of amounts) {
@@ -343,10 +344,15 @@ async function fetchViaAiStudioApi() {
       }
     }
 
-    if (interceptedBalance) {
+    // Only trust intercepted balance if we actually reached the billing page (not login)
+    if (interceptedBalance && !page.url().includes('accounts.google.com')) {
       await page.close()
       await browser.close()
       return { balance: interceptedBalance, currency: 'CHF' }
+    }
+
+    if (interceptedBalance) {
+      console.log(`  Discarding intercepted value ${interceptedBalance} — landed on login page`)
     }
 
     await page.screenshot({ path: 'gemini-aistudio-debug.png', fullPage: true })
