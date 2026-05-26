@@ -47,7 +47,7 @@ jobs:
         run: node scripts/scrape-gemini-balance.mjs
 
       - name: Upload debug screenshots on failure
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: gemini-billing-debug

@@ -61,6 +61,12 @@ async function scrapePaymentsCenter(context) {
 
     await page.waitForTimeout(3000)
 
+    // Debug: log the final URL and page title
+    console.log(`  Final URL: ${page.url()}`)
+    console.log(`  Page title: ${await page.title()}`)
+    const bodyText = await page.evaluate(() => document.body.innerText.substring(0, 500))
+    console.log(`  Page text (first 500 chars): ${bodyText}`)
+
     const balanceText = await page.evaluate(() => {
       const allText = document.body.innerText
 
@@ -127,6 +133,12 @@ async function scrapeAiStudioBilling(context) {
     })
 
     await page.waitForTimeout(5000)
+
+    // Debug: log the final URL and page title
+    console.log(`  Final URL: ${page.url()}`)
+    console.log(`  Page title: ${await page.title()}`)
+    const aiBodyText = await page.evaluate(() => document.body.innerText.substring(0, 500))
+    console.log(`  Page text (first 500 chars): ${aiBodyText}`)
 
     // DOM scraping: look for credit balance text
     const domBalance = await page.evaluate(() => {
