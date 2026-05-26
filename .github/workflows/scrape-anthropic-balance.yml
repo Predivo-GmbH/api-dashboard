@@ -2,7 +2,7 @@ name: Scrape Anthropic Credit Balance
 
 on:
   schedule:
-    - cron: '30 */6 * * *' # Every 6 hours at :30 (offset from sync-usage cron)
+    - cron: '30 */2 * * *' # Every 2 hours at :30
   workflow_dispatch: # Manual trigger
 
 jobs:

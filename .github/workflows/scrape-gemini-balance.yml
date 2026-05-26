@@ -2,7 +2,7 @@ name: Scrape Gemini Credit Balance
 
 on:
   schedule:
-    - cron: '45 */6 * * *' # Every 6 hours at :45 (offset from Anthropic scrape at :30)
+    - cron: '45 */2 * * *' # Every 2 hours at :45 (offset from Anthropic scrape at :30)
   workflow_dispatch: # Manual trigger
 
 jobs:
