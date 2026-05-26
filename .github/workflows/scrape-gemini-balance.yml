@@ -1,0 +1,53 @@
+name: Scrape Gemini Credit Balance
+
+on:
+  schedule:
+    - cron: '45 */6 * * *' # Every 6 hours at :45 (offset from Anthropic scrape at :30)
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-scrape-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Scrape Gemini balance
+        id: scrape
+        continue-on-error: true
+        env:
+          GOOGLE_SID: ${{ secrets.GOOGLE_SID }}
+          GOOGLE_APISID: ${{ secrets.GOOGLE_APISID }}
+          GOOGLE_SAPISID: ${{ secrets.GOOGLE_SAPISID }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          BACKOFFICE_SUPABASE_URL: ${{ secrets.BACKOFFICE_SUPABASE_URL }}
+          BACKOFFICE_SERVICE_KEY: ${{ secrets.BACKOFFICE_SERVICE_KEY }}
+        run: node scripts/scrape-gemini-balance.mjs
+
+      - name: Upload debug screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gemini-billing-debug
+          path: |
+            gemini-payments-debug.png
+            gemini-aistudio-debug.png
+          retention-days: 3
