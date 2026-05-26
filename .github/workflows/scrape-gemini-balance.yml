@@ -34,8 +34,12 @@ jobs:
         continue-on-error: true
         env:
           GOOGLE_SID: ${{ secrets.GOOGLE_SID }}
+          GOOGLE_HSID: ${{ secrets.GOOGLE_HSID }}
+          GOOGLE_SSID: ${{ secrets.GOOGLE_SSID }}
           GOOGLE_APISID: ${{ secrets.GOOGLE_APISID }}
           GOOGLE_SAPISID: ${{ secrets.GOOGLE_SAPISID }}
+          GOOGLE_SECURE_1PSID: ${{ secrets.GOOGLE_SECURE_1PSID }}
+          GOOGLE_SECURE_3PSID: ${{ secrets.GOOGLE_SECURE_3PSID }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           BACKOFFICE_SUPABASE_URL: ${{ secrets.BACKOFFICE_SUPABASE_URL }}

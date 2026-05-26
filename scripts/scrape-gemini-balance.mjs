@@ -6,6 +6,10 @@
 const GOOGLE_SID = process.env.GOOGLE_SID
 const GOOGLE_APISID = process.env.GOOGLE_APISID
 const GOOGLE_SAPISID = process.env.GOOGLE_SAPISID
+const GOOGLE_HSID = process.env.GOOGLE_HSID
+const GOOGLE_SSID = process.env.GOOGLE_SSID
+const GOOGLE_SECURE_1PSID = process.env.GOOGLE_SECURE_1PSID
+const GOOGLE_SECURE_3PSID = process.env.GOOGLE_SECURE_3PSID
 const BACKOFFICE_SUPABASE_URL = process.env.BACKOFFICE_SUPABASE_URL
 const BACKOFFICE_SERVICE_KEY = process.env.BACKOFFICE_SERVICE_KEY
 const SUPABASE_URL = process.env.SUPABASE_URL
@@ -17,49 +21,29 @@ const AI_STUDIO_BILLING_URL = 'https://aistudio.google.com/billing'
 
 function getGoogleCookies() {
   const cookies = []
+  const base = { domain: '.google.com', path: '/' }
 
   if (GOOGLE_SID) {
-    cookies.push({
-      name: 'SID',
-      value: GOOGLE_SID,
-      domain: '.google.com',
-      path: '/',
-      httpOnly: false,
-      secure: false,
-      sameSite: 'Lax',
-    })
+    cookies.push({ ...base, name: 'SID', value: GOOGLE_SID, httpOnly: false, secure: false, sameSite: 'Lax' })
+  }
+  if (GOOGLE_HSID) {
+    cookies.push({ ...base, name: 'HSID', value: GOOGLE_HSID, httpOnly: true, secure: false, sameSite: 'Lax' })
+  }
+  if (GOOGLE_SSID) {
+    cookies.push({ ...base, name: 'SSID', value: GOOGLE_SSID, httpOnly: true, secure: true, sameSite: 'Lax' })
   }
   if (GOOGLE_APISID) {
-    cookies.push({
-      name: 'APISID',
-      value: GOOGLE_APISID,
-      domain: '.google.com',
-      path: '/',
-      httpOnly: false,
-      secure: false,
-      sameSite: 'Lax',
-    })
+    cookies.push({ ...base, name: 'APISID', value: GOOGLE_APISID, httpOnly: false, secure: false, sameSite: 'Lax' })
   }
   if (GOOGLE_SAPISID) {
-    cookies.push({
-      name: 'SAPISID',
-      value: GOOGLE_SAPISID,
-      domain: '.google.com',
-      path: '/',
-      httpOnly: false,
-      secure: true,
-      sameSite: 'Lax',
-    })
-    // Also set __Secure-3PAPISID (some Google services check this)
-    cookies.push({
-      name: '__Secure-3PAPISID',
-      value: GOOGLE_SAPISID,
-      domain: '.google.com',
-      path: '/',
-      httpOnly: false,
-      secure: true,
-      sameSite: 'None',
-    })
+    cookies.push({ ...base, name: 'SAPISID', value: GOOGLE_SAPISID, httpOnly: false, secure: true, sameSite: 'Lax' })
+    cookies.push({ ...base, name: '__Secure-3PAPISID', value: GOOGLE_SAPISID, httpOnly: false, secure: true, sameSite: 'None' })
+  }
+  if (GOOGLE_SECURE_1PSID) {
+    cookies.push({ ...base, name: '__Secure-1PSID', value: GOOGLE_SECURE_1PSID, httpOnly: true, secure: true, sameSite: 'Lax' })
+  }
+  if (GOOGLE_SECURE_3PSID) {
+    cookies.push({ ...base, name: '__Secure-3PSID', value: GOOGLE_SECURE_3PSID, httpOnly: true, secure: true, sameSite: 'None' })
   }
 
   return cookies
