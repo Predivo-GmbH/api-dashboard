@@ -6,6 +6,14 @@ const GITHUB_SESSION_KEY = process.env.GITHUB_SESSION_KEY
 const BACKOFFICE_SUPABASE_URL = process.env.BACKOFFICE_SUPABASE_URL
 const BACKOFFICE_SERVICE_KEY = process.env.BACKOFFICE_SERVICE_KEY
 
+// GitHub user_session cookies expire 14 days after creation.
+// We calculate expiry based on current time since the cookie is refreshed on each use.
+function estimateCookieExpiry() {
+  const expires = new Date()
+  expires.setDate(expires.getDate() + 14)
+  return expires.toISOString()
+}
+
 async function scrapeGitHubBudget() {
   const { chromium } = await import('playwright')
   const browser = await chromium.launch({ headless: true })
@@ -160,6 +168,27 @@ async function updateBackOffice(actionsBudget) {
   }
 
   console.log(`BackOffice updated: api_subscriptions.balance_initial = $${actionsBudget.budget.toFixed(2)}`)
+
+  // Update scrape session expiry on api_entries so dashboard can warn before it expires
+  const expiresAt = estimateCookieExpiry()
+  const expiryRes = await fetch(
+    `${BACKOFFICE_SUPABASE_URL}/rest/v1/api_entries?id=eq.${apiEntryId}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'apikey': BACKOFFICE_SERVICE_KEY,
+        'Authorization': `Bearer ${BACKOFFICE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ scrape_session_expires_at: expiresAt }),
+    }
+  )
+  if (expiryRes.ok) {
+    console.log(`Session expiry updated: ${expiresAt}`)
+  } else {
+    console.warn('Warning: Failed to update session expiry:', await expiryRes.text())
+  }
 }
 
 async function main() {
