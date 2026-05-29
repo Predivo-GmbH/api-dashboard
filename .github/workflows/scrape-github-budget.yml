@@ -1,0 +1,45 @@
+name: Scrape GitHub Actions Budget
+
+on:
+  schedule:
+    - cron: '45 */2 * * *' # Every 2 hours at :45
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-scrape-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Scrape GitHub Actions budget
+        env:
+          GITHUB_SESSION_KEY: ${{ secrets.GH_SESSION_KEY }}
+          BACKOFFICE_SUPABASE_URL: ${{ secrets.BACKOFFICE_SUPABASE_URL }}
+          BACKOFFICE_SERVICE_KEY: ${{ secrets.BACKOFFICE_SERVICE_KEY }}
+        run: node scripts/scrape-github-budget.mjs
+
+      - name: Upload debug screenshot on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: github-budgets-debug
+          path: github-budgets-debug.png
+          retention-days: 3
