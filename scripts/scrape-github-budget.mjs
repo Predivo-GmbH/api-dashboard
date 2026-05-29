@@ -39,16 +39,35 @@ async function scrapeGitHubBudget() {
       secure: true,
       sameSite: 'Lax',
     },
+    {
+      name: 'dotcom_user',
+      value: 'Arivioo',
+      domain: '.github.com',
+      path: '/',
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Lax',
+    },
   ])
 
   const page = await context.newPage()
 
   try {
     await page.goto('https://github.com/settings/billing/budgets', {
-      waitUntil: 'networkidle',
+      waitUntil: 'domcontentloaded',
       timeout: 30000,
     })
-    await page.waitForTimeout(3000)
+
+    // Wait for the budget content to render (look for "budget" text)
+    try {
+      await page.waitForSelector('text=budget', { timeout: 15000 })
+    } catch {
+      // Take debug screenshot before failing
+      await page.screenshot({ path: 'github-budgets-debug.png', fullPage: true })
+      const url = page.url()
+      throw new Error(`Budget content not found. Page URL: ${url} — likely not authenticated. Screenshot saved.`)
+    }
+    await page.waitForTimeout(2000)
 
     // Extract all budget entries from the page
     const budgets = await page.evaluate(() => {
