@@ -1,0 +1,28 @@
+name: Sync YouTube Data API Quota
+
+# Reads ChannelMover's own youtube_api_quota_log (no Google scraping) and writes today's
+# Data API usage to the BackOffice dashboard. The daily limit is a config constant in the
+# script (update it when Google changes the grant).
+
+on:
+  schedule:
+    - cron: '15 */2 * * *' # Every 2 hours at :15 (offset from the balance scrapers)
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Sync YouTube quota usage
+        env:
+          CHANNELMOVER_SUPABASE_URL: ${{ secrets.CHANNELMOVER_SUPABASE_URL }}
+          CHANNELMOVER_SERVICE_KEY: ${{ secrets.CHANNELMOVER_SERVICE_KEY }}
+          BACKOFFICE_SUPABASE_URL: ${{ secrets.BACKOFFICE_SUPABASE_URL }}
+          BACKOFFICE_SERVICE_KEY: ${{ secrets.BACKOFFICE_SERVICE_KEY }}
+        run: node scripts/sync-youtube-quota.mjs
