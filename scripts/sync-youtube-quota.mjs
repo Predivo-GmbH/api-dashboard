@@ -12,10 +12,10 @@ const CM_SERVICE_KEY = process.env.CHANNELMOVER_SERVICE_KEY     // ChannelMover 
 const BO_SUPABASE_URL = process.env.BACKOFFICE_SUPABASE_URL     // BackOffice Supabase (xoecp...)
 const BO_SERVICE_KEY = process.env.BACKOFFICE_SERVICE_KEY       // BackOffice service_role key
 
-// YouTube Data API v3 grant (units/day). The quota resets at midnight Pacific.
-// UPDATE THIS only when Google grants a different quota (check the Cloud Console
-// "Queries per day" row). Verified 210,000 on 2026-06-29.
-const YOUTUBE_DAILY_LIMIT = 210000
+// The daily LIMIT (quota_limit) is owned by the BackOffice dashboard itself (seeded to
+// 200,000 — matching ChannelMover's conservative DAILY_DATA_API_QUOTA; the real Google
+// grant is 210,000). This job does NOT set quota_limit (BackOffice's own sync would just
+// reset it); it reads the current limit and writes today's USAGE + derived remaining.
 const API_NAME = 'YouTube Data API v3'
 
 /** Start of the current Pacific (America/Los_Angeles) day as a UTC ISO instant. */
@@ -51,7 +51,7 @@ async function getUsageToday() {
   return total
 }
 
-/** Write usage + remaining + the real limit onto the BackOffice dashboard subscription. */
+/** Write today's usage + derived remaining onto the BackOffice dashboard subscription. */
 async function updateBackOffice(used) {
   // Find the api_entry id by name
   const eRes = await fetch(
@@ -62,7 +62,16 @@ async function updateBackOffice(used) {
   if (!entries?.length) throw new Error(`"${API_NAME}" not found in BackOffice api_entries`)
   const apiEntryId = entries[0].id
 
-  const remaining = Math.max(0, YOUTUBE_DAILY_LIMIT - used)
+  // Read the limit BackOffice owns, then derive remaining against it (so we stay consistent
+  // whatever the configured limit is — we never fight BackOffice over quota_limit).
+  const sRes = await fetch(
+    `${BO_SUPABASE_URL}/rest/v1/api_subscriptions?api_entry_id=eq.${apiEntryId}&select=quota_limit`,
+    { headers: { apikey: BO_SERVICE_KEY, Authorization: `Bearer ${BO_SERVICE_KEY}` } },
+  )
+  const subs = await sRes.json()
+  const limit = Number(subs?.[0]?.quota_limit ?? 200000)
+  const remaining = Math.max(0, limit - used)
+
   const res = await fetch(
     `${BO_SUPABASE_URL}/rest/v1/api_subscriptions?api_entry_id=eq.${apiEntryId}`,
     {
@@ -74,14 +83,13 @@ async function updateBackOffice(used) {
         Prefer: 'return=minimal',
       },
       body: JSON.stringify({
-        quota_limit: YOUTUBE_DAILY_LIMIT,
         current_usage: used,
         credits_remaining: remaining,
       }),
     },
   )
   if (!res.ok) throw new Error(`BackOffice update failed: ${res.status} ${await res.text()}`)
-  console.log(`BackOffice updated: ${used} used / ${YOUTUBE_DAILY_LIMIT} (=${remaining} left today)`)
+  console.log(`BackOffice updated: ${used} used / ${limit} (=${remaining} left today)`)
 }
 
 async function main() {
@@ -95,7 +103,7 @@ async function main() {
   const output = process.env.GITHUB_OUTPUT
   if (output) {
     const fs = await import('fs')
-    fs.appendFileSync(output, `used=${used}\nlimit=${YOUTUBE_DAILY_LIMIT}\n`)
+    fs.appendFileSync(output, `used=${used}\n`)
   }
 }
 
